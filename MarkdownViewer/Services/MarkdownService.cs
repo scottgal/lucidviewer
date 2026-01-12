@@ -147,16 +147,46 @@ public partial class MarkdownService
             }
             catch (Exception ex)
             {
+                // Detect unsupported diagram types
+                var diagramType = DetectMermaidDiagramType(mermaidCode);
+                var errorMessage = ex.Message.Contains("Unsupported") || ex.Message.Contains("parse")
+                    ? $"Naiad cannot yet render '{diagramType}' diagrams"
+                    : ex.Message;
+
                 // On error, show the code with error message
                 return $"""
-                    > **Mermaid Error**: {ex.Message}
+                    > ⚠️ **Mermaid Render Error**: {errorMessage}
 
-                    ```
+                    ```mermaid
                     {mermaidCode}
                     ```
                     """;
             }
         });
+    }
+
+    private static string DetectMermaidDiagramType(string code)
+    {
+        var firstLine = code.Split('\n').FirstOrDefault()?.Trim().ToLowerInvariant() ?? "";
+        return firstLine switch
+        {
+            var s when s.StartsWith("flowchart") => "flowchart",
+            var s when s.StartsWith("graph") => "graph",
+            var s when s.StartsWith("sequencediagram") => "sequence diagram",
+            var s when s.StartsWith("classDiagram") => "class diagram",
+            var s when s.StartsWith("statediagram") => "state diagram",
+            var s when s.StartsWith("erdiagram") => "ER diagram",
+            var s when s.StartsWith("journey") => "journey",
+            var s when s.StartsWith("gantt") => "gantt",
+            var s when s.StartsWith("pie") => "pie chart",
+            var s when s.StartsWith("gitgraph") => "git graph",
+            var s when s.StartsWith("mindmap") => "mindmap",
+            var s when s.StartsWith("timeline") => "timeline",
+            var s when s.StartsWith("sankey") => "sankey",
+            var s when s.StartsWith("xychart") => "XY chart",
+            var s when s.StartsWith("block") => "block diagram",
+            _ => firstLine.Split(' ').FirstOrDefault() ?? "unknown"
+        };
     }
 
     [GeneratedRegex(@"!\[(.*?)\]\(([^)]+)\)", RegexOptions.Compiled)]

@@ -29,50 +29,112 @@
         <DockPanel>
             <!-- Clean Header Bar -->
             <Border DockPanel.Dock="Top" Classes="header-bar">
-                <Grid ColumnDefinitions="Auto,*,Auto">
+                <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto">
                     <!-- Left: Hamburger Menu -->
                     <Button Grid.Column="0"
                             Classes="header-btn"
                             Click="OnToggleSidePanel"
-                            ToolTip.Tip="Menu">
-                        <PathIcon Data="M2,4 L22,4 L22,6 L2,6 Z M2,11 L22,11 L22,13 L2,13 Z M2,18 L22,18 L22,20 L2,20 Z"
-                                  Width="20" Height="20"
+                            ToolTip.Tip="Menu (Ctrl+B)">
+                        <PathIcon Data="M2 5h20M2 12h20M2 19h20"
+                                  Width="18" Height="18"
                                   Foreground="{DynamicResource AppText}" />
                     </Button>
 
-                    <!-- Center: Branding -->
-                    <StackPanel Grid.Column="1"
+                    <!-- TOC Button -->
+                    <Button x:Name="TocButton"
+                            Grid.Column="1"
+                            Classes="header-btn"
+                            Click="OnToggleToc"
+                            ToolTip.Tip="Table of Contents">
+                        <PathIcon Data="M3 4h10M3 8h18M3 12h10M3 16h18M3 20h10"
+                                  Width="18" Height="18"
+                                  Foreground="{DynamicResource AppText}" />
+                    </Button>
+
+                    <!-- Center: Zoom Controls -->
+                    <StackPanel Grid.Column="2"
                                 Orientation="Horizontal"
                                 HorizontalAlignment="Center"
-                                VerticalAlignment="Center">
-                        <TextBlock Text="lucid"
-                                   FontSize="18"
-                                   FontWeight="SemiBold"
-                                   FontStyle="Italic"
-                                   FontFamily="Raleway, Segoe UI, San Francisco, Ubuntu"
-                                   Foreground="{DynamicResource BrandLucid}" />
-                        <TextBlock Text="VIEW"
-                                   FontSize="18"
-                                   FontWeight="Bold"
-                                   FontFamily="Raleway, Segoe UI, San Francisco, Ubuntu"
-                                   Foreground="{DynamicResource BrandVIEW}" />
+                                VerticalAlignment="Center"
+                                Spacing="6">
+                        <ToggleButton x:Name="FitWidthToggle"
+                                      Classes="header-btn"
+                                      IsChecked="True"
+                                      Click="OnFitModeToggle"
+                                      ToolTip.Tip="Fit to width">
+                            <PathIcon Data="M4 12h16M4 12l3-3M4 12l3 3M20 12l-3-3M20 12l-3 3"
+                                      Width="16" Height="16"
+                                      Foreground="{DynamicResource AppText}" />
+                        </ToggleButton>
+                        <ToggleButton x:Name="FitHeightToggle"
+                                      Classes="header-btn"
+                                      IsChecked="False"
+                                      Click="OnFitModeToggle"
+                                      ToolTip.Tip="Fit to height">
+                            <PathIcon Data="M12 4v16M12 4l-3 3M12 4l3 3M12 20l-3-3M12 20l3-3"
+                                      Width="16" Height="16"
+                                      Foreground="{DynamicResource AppText}" />
+                        </ToggleButton>
+                        <Slider x:Name="ZoomSlider"
+                                Width="100"
+                                Minimum="50"
+                                Maximum="200"
+                                Value="100"
+                                TickFrequency="10"
+                                IsSnapToTickEnabled="True"
+                                VerticalAlignment="Center"
+                                ValueChanged="OnZoomSliderChanged" />
+                        <TextBlock x:Name="ZoomPercentText"
+                                   Text="100%"
+                                   Width="36"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource AppTextSecondary}"
+                                   FontSize="12" />
+                        <Button Classes="header-btn" Click="OnResetZoom" ToolTip.Tip="Reset zoom (1:1)">
+                            <TextBlock Text="1:1" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AppText}" />
+                        </Button>
                     </StackPanel>
 
+                    <!-- Preview/Raw Toggle -->
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="0" Margin="8,0">
+                        <RadioButton x:Name="PreviewTab"
+                                     Content="Preview"
+                                     GroupName="ViewTabs"
+                                     IsChecked="True"
+                                     Click="OnTabChanged"
+                                     Classes="header-tab" />
+                        <RadioButton x:Name="RawTab"
+                                     Content="Raw"
+                                     GroupName="ViewTabs"
+                                     Click="OnTabChanged"
+                                     Classes="header-tab" />
+                    </StackPanel>
+
+                    <!-- Search Button -->
+                    <Button Grid.Column="4"
+                            Classes="header-btn"
+                            Click="OnToggleSearch"
+                            ToolTip.Tip="Search (Ctrl+F)">
+                        <PathIcon Data="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z"
+                                  Width="16" Height="16"
+                                  Foreground="{DynamicResource AppText}" />
+                    </Button>
+
                     <!-- Right: Font Size Controls -->
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="0">
+                    <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="0">
                         <Button x:Name="FontDecreaseBtn"
                                 Classes="header-btn font-btn-small"
                                 Click="OnFontSizeDecrease"
                                 IsEnabled="False"
                                 ToolTip.Tip="Decrease font size (Ctrl+-)">
-                            <TextBlock Text="A" FontSize="14" FontWeight="Medium" />
+                            <TextBlock Text="A" FontSize="13" FontWeight="Medium" />
                         </Button>
                         <Button x:Name="FontIncreaseBtn"
                                 Classes="header-btn font-btn-large"
                                 Click="OnFontSizeIncrease"
                                 IsEnabled="False"
                                 ToolTip.Tip="Increase font size (Ctrl++)">
-                            <TextBlock Text="A" FontSize="20" FontWeight="Medium" />
+                            <TextBlock Text="A" FontSize="18" FontWeight="Medium" />
                         </Button>
                     </StackPanel>
                 </Grid>
@@ -199,60 +261,6 @@
                             </Grid>
                         </Border>
 
-                        <!-- Page Navigation Bar -->
-                        <Border x:Name="PageNavBar"
-                                DockPanel.Dock="Top"
-                                IsVisible="False"
-                                Classes="page-nav-bar">
-                            <Grid ColumnDefinitions="Auto,*,Auto">
-                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
-                                    <Button Classes="toolbar" Click="OnPreviousPage" ToolTip.Tip="Previous page">
-                                        <PathIcon Data="M15 18l-6-6 6-6" Width="16" Height="16" />
-                                    </Button>
-                                    <TextBlock x:Name="PageInfoText"
-                                               Text="Page 1 of 1"
-                                               VerticalAlignment="Center"
-                                               Foreground="{DynamicResource AppTextSecondary}" />
-                                    <Button Classes="toolbar" Click="OnNextPage" ToolTip.Tip="Next page">
-                                        <PathIcon Data="M9 18l6-6-6-6" Width="16" Height="16" />
-                                    </Button>
-                                </StackPanel>
-                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
-                                    <ToggleButton x:Name="ContinuousScrollToggle"
-                                                  Classes="toolbar"
-                                                  IsChecked="True"
-                                                  Click="OnViewModeToggle"
-                                                  ToolTip.Tip="Continuous scroll">
-                                        <PathIcon Data="M4 6h16M4 10h16M4 14h16M4 18h16" Width="16" Height="16" />
-                                    </ToggleButton>
-                                    <ToggleButton x:Name="SinglePageToggle"
-                                                  Classes="toolbar"
-                                                  IsChecked="False"
-                                                  Click="OnViewModeToggle"
-                                                  ToolTip.Tip="Single page view">
-                                        <PathIcon Data="M4 4h16v16H4V4z" Width="16" Height="16" />
-                                    </ToggleButton>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
-                        <!-- Tab Strip -->
-                        <Border DockPanel.Dock="Top" Classes="tab-strip">
-                            <StackPanel Orientation="Horizontal" Spacing="0">
-                                <RadioButton x:Name="PreviewTab"
-                                             Content="Preview"
-                                             GroupName="ViewTabs"
-                                             IsChecked="True"
-                                             Click="OnTabChanged"
-                                             Classes="tab" />
-                                <RadioButton x:Name="RawTab"
-                                             Content="Raw"
-                                             GroupName="ViewTabs"
-                                             Click="OnTabChanged"
-                                             Classes="tab" />
-                            </StackPanel>
-                        </Border>
-
                         <!-- Metadata Panel (categories, date) -->
                         <Border x:Name="MetadataPanel" DockPanel.Dock="Top" Classes="metadata-panel" IsVisible="False">
                             <Grid ColumnDefinitions="*,Auto">
@@ -283,14 +291,29 @@
                         <!-- Rendered Markdown -->
                         <ScrollViewer x:Name="RenderedScroller"
                                       IsVisible="True"
-                                      HorizontalScrollBarVisibility="Disabled"
-                                      VerticalScrollBarVisibility="Auto"
-                                      Background="{DynamicResource AppBackground}">
+                                      HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollBarVisibility="Visible"
+                                      AllowAutoHide="False"
+                                      Background="{DynamicResource AppBackground}"
+                                      PointerWheelChanged="OnMarkdownPointerWheelChanged">
                             <LayoutTransformControl x:Name="MarkdownLayoutTransform">
-                                <Border Padding="40,32" MaxWidth="920" HorizontalAlignment="Center">
-                                    <md:MarkdownScrollViewer x:Name="MarkdownViewer"
+                                <Border Padding="40,32">
+                                    <md:MarkdownScrollViewer x:Name="MdViewer"
                                                               Markdown=""
-                                                              SaveScrollValueWhenContentUpdated="True" />
+                                                              SaveScrollValueWhenContentUpdated="True">
+                                        <md:MarkdownScrollViewer.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="Copy" Click="OnCopyText" InputGesture="Ctrl+C">
+                                                    <MenuItem.Icon>
+                                                        <PathIcon Data="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+                                                    </MenuItem.Icon>
+                                                </MenuItem>
+                                                <MenuItem Header="Select All" Click="OnSelectAll" InputGesture="Ctrl+A" />
+                                                <Separator />
+                                                <MenuItem Header="Copy as HTML" Click="OnCopyAsHtml" />
+                                            </ContextMenu>
+                                        </md:MarkdownScrollViewer.ContextMenu>
+                                    </md:MarkdownScrollViewer>
                                 </Border>
                             </LayoutTransformControl>
                         </ScrollViewer>
@@ -524,6 +547,61 @@
                             </StackPanel>
                         </Button>
                     </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+
+        <!-- TOC Panel Overlay (click to close) -->
+        <Border x:Name="TocOverlay"
+                IsVisible="False"
+                Background="{DynamicResource PanelOverlay}"
+                ZIndex="200"
+                PointerPressed="OnTocOverlayClick" />
+
+        <!-- TOC Slide-In Panel (from right) -->
+        <Border x:Name="TocPanel"
+                IsVisible="False"
+                Width="280"
+                HorizontalAlignment="Right"
+                Background="{DynamicResource AppBackgroundSecondary}"
+                BorderBrush="{DynamicResource AppBorder}"
+                BorderThickness="1,0,0,0"
+                ZIndex="300">
+            <DockPanel>
+                <!-- TOC Header -->
+                <Border DockPanel.Dock="Top" Classes="panel-header">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0"
+                                   Text="Table of Contents"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource AppText}"
+                                   VerticalAlignment="Center"
+                                   Margin="12,0,0,0" />
+                        <Button Grid.Column="1"
+                                Classes="header-btn"
+                                Click="OnCloseToc"
+                                ToolTip.Tip="Close">
+                            <PathIcon Data="M18 6L6 18M6 6l12 12" Width="16" Height="16" Foreground="{DynamicResource AppText}" />
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <!-- TOC Content -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ListBox x:Name="TocItemsControl"
+                             Margin="8"
+                             Background="Transparent"
+                             SelectionChanged="OnTocSelectionChanged">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Text}"
+                                           TextTrimming="CharacterEllipsis"
+                                           Margin="{Binding Margin}"
+                                           Foreground="{DynamicResource AppText}" />
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
                 </ScrollViewer>
             </DockPanel>
         </Border>

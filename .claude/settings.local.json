@@ -51,7 +51,8 @@
       "WebFetch(domain:www.nuget.org)",
       "Bash(dotnet remove:*)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(dotnet nuget why:*)"
     ]
   }
 }

@@ -44,6 +44,43 @@
         <Setter Property="MinWidth" Value="36" />
     </Style>
 
+    <Style Selector="ToggleButton.header-btn">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Foreground" Value="{DynamicResource AppText}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="ToggleButton.header-btn:pointerover">
+        <Setter Property="Background" Value="{DynamicResource AppSurfaceHover}" />
+    </Style>
+
+    <Style Selector="ToggleButton.header-btn:checked">
+        <Setter Property="Background" Value="{DynamicResource AppAccent}" />
+    </Style>
+
+    <Style Selector="RadioButton.header-tab">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="12,6" />
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="RadioButton.header-tab:pointerover">
+        <Setter Property="Background" Value="{DynamicResource AppSurfaceHover}" />
+    </Style>
+
+    <Style Selector="RadioButton.header-tab:checked">
+        <Setter Property="Background" Value="{DynamicResource AppSurface}" />
+        <Setter Property="Foreground" Value="{DynamicResource AppText}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
     <!-- ==================== SIDE PANEL ==================== -->
 
     <Style Selector="Border.panel-header">

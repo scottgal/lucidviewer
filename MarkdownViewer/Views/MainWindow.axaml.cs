@@ -27,7 +27,7 @@ public partial class MainWindow : Window
     private List<SearchResult> _searchResults = [];
     private int _currentSearchIndex = -1;
     private bool _isSidePanelOpen;
-    private bool _isContinuousScroll = true;
+    private double _zoomLevel = 1.0;
 
     public MainWindow()
     {
@@ -257,14 +257,14 @@ public partial class MainWindow : Window
 
         // Process and display markdown
         var processed = _markdownService.ProcessMarkdown(content);
-        MarkdownViewer.Markdown = processed;
+        MdViewer.Markdown = processed;
         RawTextBlock.Text = content;
 
         WelcomePanel.IsVisible = false;
         ContentGrid.IsVisible = true;
 
-        // Show page navigation bar
-        PageNavBar.IsVisible = true;
+        // Update TOC
+        UpdateToc();
 
         // Reset to preview tab
         PreviewTab.IsChecked = true;
@@ -274,7 +274,7 @@ public partial class MainWindow : Window
         // Calculate pages after layout (estimate based on content length)
         var estimatedHeight = content.Split('\n').Length * 24.0; // rough estimate
         _paginationService.CalculatePages(estimatedHeight);
-        UpdatePageInfo();
+        // Pagination removed
 
         return Task.CompletedTask;
     }
@@ -502,7 +502,7 @@ public partial class MainWindow : Window
         if (_paginationService.PreviousPage())
         {
             ScrollToCurrentPage();
-            UpdatePageInfo();
+            // Pagination removed
         }
     }
 
@@ -511,7 +511,7 @@ public partial class MainWindow : Window
         if (_paginationService.NextPage())
         {
             ScrollToCurrentPage();
-            UpdatePageInfo();
+            // Pagination removed
         }
     }
 
@@ -521,26 +521,183 @@ public partial class MainWindow : Window
         RenderedScroller.Offset = new Vector(0, offset);
     }
 
-    private void UpdatePageInfo()
+    private void UpdateToc()
     {
-        PageInfoText.Text = $"Page {_paginationService.CurrentPage} of {_paginationService.TotalPages}";
+        // Update TOC items control
+        TocItemsControl.ItemsSource = _headings.Select(h => new TocItem
+        {
+            Text = h.Text,
+            Margin = new Thickness(h.Level * 12, 2, 0, 2),
+            Heading = h
+        }).ToList();
     }
 
-    private void OnViewModeToggle(object? sender, RoutedEventArgs e)
+    private void OnTocSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        // Toggle between continuous and single page view
-        if (sender == ContinuousScrollToggle)
+        if (TocItemsControl.SelectedItem is TocItem item)
         {
-            _isContinuousScroll = true;
-            ContinuousScrollToggle.IsChecked = true;
-            SinglePageToggle.IsChecked = false;
+            ScrollToHeading(item.Heading);
+            OnCloseToc(sender, e);
+            TocItemsControl.SelectedItem = null;
         }
-        else
+    }
+
+    private class TocItem
+    {
+        public string Text { get; set; } = "";
+        public Thickness Margin { get; set; }
+        public HeadingItem Heading { get; set; } = null!;
+    }
+
+    private void OnFitModeToggle(object? sender, RoutedEventArgs e)
+    {
+        if (sender == FitWidthToggle)
         {
-            _isContinuousScroll = false;
-            ContinuousScrollToggle.IsChecked = false;
-            SinglePageToggle.IsChecked = true;
+            FitWidthToggle.IsChecked = true;
+            FitHeightToggle.IsChecked = false;
+            ApplyFitWidth();
         }
+        else if (sender == FitHeightToggle)
+        {
+            FitWidthToggle.IsChecked = false;
+            FitHeightToggle.IsChecked = true;
+            ApplyFitHeight();
+        }
+    }
+
+    private void ApplyFitWidth()
+    {
+        // Reset to width-based scaling (default behavior)
+        var scale = _fontSize / 16.0;
+        MarkdownLayoutTransform.LayoutTransform = new ScaleTransform(scale, scale);
+        ZoomSlider.Value = _fontSize / 16.0 * 100;
+        UpdateZoomPercentText();
+    }
+
+    private void ApplyFitHeight()
+    {
+        // Scale to fit viewport height
+        if (RenderedScroller.Viewport.Height > 0 && MdViewer.Bounds.Height > 0)
+        {
+            var viewportHeight = RenderedScroller.Viewport.Height;
+            var contentHeight = MdViewer.Bounds.Height;
+            var scale = Math.Min(2.0, Math.Max(0.5, viewportHeight / contentHeight));
+            MarkdownLayoutTransform.LayoutTransform = new ScaleTransform(scale, scale);
+            ZoomSlider.Value = scale * 100;
+            UpdateZoomPercentText();
+        }
+    }
+
+    private void OnZoomSliderChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (MarkdownLayoutTransform == null) return;
+
+        var scale = e.NewValue / 100.0;
+        MarkdownLayoutTransform.LayoutTransform = new ScaleTransform(scale, scale);
+        UpdateZoomPercentText();
+
+        // Deselect fit mode toggles when manually adjusting
+        if (Math.Abs(e.NewValue - (_fontSize / 16.0 * 100)) > 1)
+        {
+            FitWidthToggle.IsChecked = false;
+            FitHeightToggle.IsChecked = false;
+        }
+    }
+
+    private void OnResetZoom(object? sender, RoutedEventArgs e)
+    {
+        ZoomSlider.Value = 100;
+        FitWidthToggle.IsChecked = true;
+        FitHeightToggle.IsChecked = false;
+    }
+
+    private void UpdateZoomPercentText()
+    {
+        if (ZoomPercentText != null)
+        {
+            ZoomPercentText.Text = $"{(int)ZoomSlider.Value}%";
+        }
+    }
+
+    #endregion
+
+    #region Context Menu & Clipboard
+
+    private async void OnCopyText(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+            if (clipboard != null && !string.IsNullOrEmpty(_rawContent))
+            {
+                await clipboard.SetTextAsync(_rawContent);
+            }
+        }
+        catch { }
+    }
+
+    private void OnSelectAll(object? sender, RoutedEventArgs e)
+    {
+        // Markdown.Avalonia doesn't support text selection natively
+        // Switch to raw view for selection
+        RawTab.IsChecked = true;
+        RenderedScroller.IsVisible = false;
+        RawScroller.IsVisible = true;
+    }
+
+    private async void OnCopyAsHtml(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+            if (clipboard != null && !string.IsNullOrEmpty(_rawContent))
+            {
+                var html = ConvertMarkdownToHtml(_markdownService.ProcessMarkdown(_rawContent));
+                await clipboard.SetTextAsync(html);
+            }
+        }
+        catch { }
+    }
+
+    #endregion
+
+    #region Mouse Wheel Zoom
+
+    private void OnMarkdownPointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        // Ctrl + Mouse wheel to zoom
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        {
+            var delta = e.Delta.Y > 0 ? 10 : -10;
+            var newValue = Math.Clamp(ZoomSlider.Value + delta, 50, 200);
+            ZoomSlider.Value = newValue;
+            e.Handled = true;
+        }
+    }
+
+    #endregion
+
+    #region TOC Panel
+
+    private bool _isTocOpen;
+
+    private void OnToggleToc(object? sender, RoutedEventArgs e)
+    {
+        _isTocOpen = !_isTocOpen;
+        TocPanel.IsVisible = _isTocOpen;
+        TocOverlay.IsVisible = _isTocOpen;
+    }
+
+    private void OnCloseToc(object? sender, RoutedEventArgs e)
+    {
+        _isTocOpen = false;
+        TocPanel.IsVisible = false;
+        TocOverlay.IsVisible = false;
+    }
+
+    private void OnTocOverlayClick(object? sender, PointerPressedEventArgs e)
+    {
+        OnCloseToc(sender, e);
     }
 
     #endregion
@@ -877,7 +1034,7 @@ public partial class MainWindow : Window
     private void ScrollToHeading(HeadingItem heading)
     {
         // Find the heading element in the visual tree and scroll to it
-        var headingElement = FindHeadingElement(MarkdownViewer, heading.Text);
+        var headingElement = FindHeadingElement(MdViewer, heading.Text);
         if (headingElement != null)
         {
             // Get the position of the element relative to the scroll viewer
