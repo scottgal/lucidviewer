@@ -28,12 +28,16 @@
             <SolidColorBrush x:Key="AppHeadingBorder" Color="#21262d" />
             <SolidColorBrush x:Key="AppTableHeaderBg" Color="#161b22" />
             <SolidColorBrush x:Key="AppSelectionBg" Color="#58a6ff30" />
+            <!-- Panel overlay - theme dependent (light overlay for dark themes) -->
+            <SolidColorBrush x:Key="PanelOverlay" Color="#40ffffff" />
+            <!-- Brand colors - lucid (gray) + VIEW (white/black depending on theme) -->
+            <SolidColorBrush x:Key="BrandLucid" Color="#DDDDDD" />
+            <SolidColorBrush x:Key="BrandVIEW" Color="#FFFFFF" />
         </ResourceDictionary>
     </Application.Resources>
 
     <Application.Styles>
         <FluentTheme />
-        <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
-        <StyleInclude Source="avares://MarkdownViewer/Styles/AppStyles.axaml" />
+        <StyleInclude Source="avares://lucidVIEW/Styles/AppStyles.axaml" />
     </Application.Styles>
 </Application>

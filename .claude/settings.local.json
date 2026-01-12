@@ -5,7 +5,19 @@
       "Bash(if exist \"E:\\\\source\\\\markdown.viewer\\\\MarkdownViewer\\\\Services\\\\UploadService.cs\" del \"E:\\\\source\\\\markdown.viewer\\\\MarkdownViewer\\\\Services\\\\UploadService.cs\")",
       "Bash(dotnet restore:*)",
       "Bash(timeout 5 dotnet run:*)",
-      "Bash(timeout 8 dotnet run:*)"
+      "Bash(timeout 8 dotnet run:*)",
+      "Bash(timeout:*)",
+      "Bash(dotnet run:*)",
+      "Bash(dir:*)",
+      "Bash(powershell -Command \"Get-ChildItem -Path ''E:\\\\source\\\\markdown.viewer\\\\MarkdownViewer'' -Recurse -Filter ''*.cs'' -o Name | head -20\")",
+      "WebFetch(domain:github.com)",
+      "Bash(powershell -Command:*)",
+      "Bash(dotnet publish:*)",
+      "Bash(dotnet clean:*)",
+      "Bash(start /B dotnet run:*)",
+      "Bash(dotnet list:*)",
+      "Bash(where:*)",
+      "Bash(dotnet add:*)"
     ]
   }
 }

@@ -117,5 +117,5 @@ public class HeadingItem
     public List<HeadingItem> Children { get; set; } = [];
 
     public string DisplayText => new string(' ', (Level - 1) * 2) + Text;
-    public double IndentMargin => (Level - 1) * 16;
+    public Avalonia.Thickness ItemPadding => new((Level - 1) * 16, 6, 8, 6);
 }

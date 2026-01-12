@@ -49,6 +49,8 @@ public class ThemeService
         SetColor(resources, "AppHeadingBorder", definition.HeadingBorder);
         SetColor(resources, "AppTableHeaderBg", definition.TableHeaderBg);
         SetColor(resources, "AppSelectionBg", definition.SelectionBg);
+        SetColor(resources, "BrandLucid", definition.BrandLucid);
+        SetColor(resources, "BrandVIEW", definition.BrandVIEW);
     }
 
     private static void SetColor(IResourceDictionary resources, string key, string hex)

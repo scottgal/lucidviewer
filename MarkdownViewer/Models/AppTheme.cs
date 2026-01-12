@@ -59,7 +59,9 @@ public static class ThemeColors
         BlockquoteBorder = "#0969da",
         HeadingBorder = "#d0d7de",
         TableHeaderBg = "#f6f8fa",
-        SelectionBg = "#0969da20"
+        SelectionBg = "#0969da20",
+        BrandLucid = "#555555",  // Darker gray for light theme
+        BrandVIEW = "#1a1a1a"    // Black for light theme
     };
 
     public static readonly ThemeDefinition Dark = new()
@@ -86,7 +88,9 @@ public static class ThemeColors
         BlockquoteBorder = "#58a6ff",
         HeadingBorder = "#21262d",
         TableHeaderBg = "#161b22",
-        SelectionBg = "#58a6ff30"
+        SelectionBg = "#58a6ff30",
+        BrandLucid = "#DDDDDD",  // Gray for dark theme
+        BrandVIEW = "#FFFFFF"   // White for dark theme
     };
 
     public static readonly ThemeDefinition VSCode = new()
@@ -113,7 +117,9 @@ public static class ThemeColors
         BlockquoteBorder = "#0078d4",
         HeadingBorder = "#3c3c3c",
         TableHeaderBg = "#2d2d30",
-        SelectionBg = "#264f78"
+        SelectionBg = "#264f78",
+        BrandLucid = "#DDDDDD",  // Gray for dark theme
+        BrandVIEW = "#FFFFFF"   // White for dark theme
     };
 
     public static readonly ThemeDefinition GitHub = new()
@@ -140,7 +146,9 @@ public static class ThemeColors
         BlockquoteBorder = "#f78166",
         HeadingBorder = "#21262d",
         TableHeaderBg = "#161b22",
-        SelectionBg = "#388bfd26"
+        SelectionBg = "#388bfd26",
+        BrandLucid = "#DDDDDD",  // Gray for dark theme
+        BrandVIEW = "#FFFFFF"   // White for dark theme
     };
 }
 
@@ -169,4 +177,7 @@ public class ThemeDefinition
     public string HeadingBorder { get; set; } = "";
     public string TableHeaderBg { get; set; } = "";
     public string SelectionBg { get; set; } = "";
+    // Brand colors for lucidVIEW logo
+    public string BrandLucid { get; set; } = "#DDDDDD"; // "lucid" - gray
+    public string BrandVIEW { get; set; } = "#FFFFFF";  // "VIEW" - white (black on light)
 }

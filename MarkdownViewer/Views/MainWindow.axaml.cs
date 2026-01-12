@@ -2,9 +2,12 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using MarkdownViewer.Models;
 using MarkdownViewer.Services;
+using SkiaSharp;
 using System.Windows.Input;
 
 namespace MarkdownViewer.Views;
@@ -16,12 +19,15 @@ public partial class MainWindow : Window
     private readonly NavigationService _navigationService;
     private readonly ThemeService _themeService;
     private readonly SearchService _searchService;
+    private readonly PaginationService _paginationService;
     private string? _currentFilePath;
     private string _rawContent = string.Empty;
     private List<HeadingItem> _headings = [];
-    private double _zoomLevel = 1.0;
+    private int _fontSize = 16;
     private List<SearchResult> _searchResults = [];
     private int _currentSearchIndex = -1;
+    private bool _isSidePanelOpen;
+    private bool _isContinuousScroll = true;
 
     public MainWindow()
     {
@@ -32,27 +38,28 @@ public partial class MainWindow : Window
         _navigationService = new NavigationService();
         _themeService = new ThemeService(Application.Current!);
         _searchService = new SearchService();
+        _paginationService = new PaginationService();
 
         Width = _settings.WindowWidth;
         Height = _settings.WindowHeight;
+        _fontSize = _settings.FontSize > 0 ? (int)_settings.FontSize : 16;
 
         DataContext = this;
 
+        // Set window icon
+        SetWindowIcon();
+
         // Apply saved theme
         ApplyTheme(_settings.Theme);
-        UpdateThemeComboBox(_settings.Theme);
-
-        // Apply nav panel state
-        NavPanel.IsVisible = _settings.ShowNavigationPanel;
-        NavPanelToggle.IsChecked = _settings.ShowNavigationPanel;
-        NavPanelCheck.IsChecked = _settings.ShowNavigationPanel;
+        UpdateThemeCardSelection(_settings.Theme);
 
         // Drag and drop
         AddHandler(DragDrop.DragEnterEvent, OnDragEnter);
         AddHandler(DragDrop.DragLeaveEvent, OnDragLeave);
         AddHandler(DragDrop.DropEvent, OnDrop);
 
-        PopulateRecentFiles();
+        UpdateRecentFiles();
+        UpdateFontSizeDisplay();
         Closing += OnWindowClosing;
 
         // Command line argument
@@ -69,19 +76,77 @@ public partial class MainWindow : Window
     public ICommand OpenUrlCommand => new RelayCommand(async () => await OpenUrl());
     public ICommand OpenSettingsCommand => new RelayCommand(async () => await OpenSettings());
     public ICommand ToggleFullScreenCommand => new RelayCommand(ToggleFullScreen);
-    public ICommand ToggleNavPanelCommand => new RelayCommand(ToggleNavPanel);
-    public ICommand ZoomInCommand => new RelayCommand(ZoomIn);
-    public ICommand ZoomOutCommand => new RelayCommand(ZoomOut);
-    public ICommand ResetZoomCommand => new RelayCommand(ResetZoom);
-    public ICommand ExitCommand => new RelayCommand(() => Close());
-    public ICommand NavigateToHeadingCommand => new RelayCommand<HeadingItem>(NavigateToHeading);
+    public ICommand ToggleSidePanelCommand => new RelayCommand(ToggleSidePanel);
     public ICommand ToggleSearchCommand => new RelayCommand(ToggleSearch);
-    public ICommand CloseSearchCommand => new RelayCommand(CloseSearch);
+    public ICommand EscapeCommand => new RelayCommand(OnEscape);
+    public ICommand FontSizeIncreaseCommand => new RelayCommand(IncreaseFontSize);
+    public ICommand FontSizeDecreaseCommand => new RelayCommand(DecreaseFontSize);
+    public ICommand PrintCommand => new RelayCommand(async () => await Print());
     public ICommand OpenHelpCommand => new RelayCommand(async () => await OpenHelp());
 
     #endregion
 
+    #region Side Panel
+
+    private void ToggleSidePanel()
+    {
+        _isSidePanelOpen = !_isSidePanelOpen;
+        SidePanel.IsVisible = _isSidePanelOpen;
+        SidePanelOverlay.IsVisible = _isSidePanelOpen;
+    }
+
+    private void OnToggleSidePanel(object? sender, RoutedEventArgs e) => ToggleSidePanel();
+    private void OnCloseSidePanel(object? sender, RoutedEventArgs e) => CloseSidePanel();
+    private void OnOverlayClick(object? sender, PointerPressedEventArgs e) => CloseSidePanel();
+
+    private void CloseSidePanel()
+    {
+        _isSidePanelOpen = false;
+        SidePanel.IsVisible = false;
+        SidePanelOverlay.IsVisible = false;
+    }
+
+    private void OnEscape()
+    {
+        if (_isSidePanelOpen)
+            CloseSidePanel();
+        else if (SearchPanel.IsVisible)
+            CloseSearch();
+    }
+
+    #endregion
+
     #region File Operations
+
+    private void OnOpenFile(object? sender, RoutedEventArgs e)
+    {
+        CloseSidePanel();
+        _ = OpenFile();
+    }
+
+    private void OnOpenUrl(object? sender, RoutedEventArgs e)
+    {
+        CloseSidePanel();
+        _ = OpenUrl();
+    }
+
+    private void OnMostlyLucidClick(object? sender, RoutedEventArgs e)
+    {
+        OpenBrowserUrl("https://www.mostlylucid.net");
+    }
+
+    private void OpenBrowserUrl(string url)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = url,
+                UseShellExecute = true
+            });
+        }
+        catch { }
+    }
 
     private async Task OpenFile()
     {
@@ -115,13 +180,18 @@ public partial class MainWindow : Window
             await DisplayMarkdown(content);
 
             _currentFilePath = path;
-            Title = $"{Path.GetFileName(path)} - Markdown Viewer";
+            Title = $"{Path.GetFileName(path)} - lucidVIEW";
+            EnableFontControls(true);
             _settings.AddRecentFile(path);
-            PopulateRecentFiles();
+            UpdateRecentFiles();
 
             var fileInfo = new FileInfo(path);
+            var wordCount = CountWords(content);
+
+            StatusText.Text = path;
+            FileDateText.Text = fileInfo.LastWriteTime.ToString("yyyy-MM-dd HH:mm");
+            WordCountText.Text = $"{wordCount:N0} words";
             FileInfoText.Text = $"{fileInfo.Length:N0} bytes";
-            StatusText.Text = "Ready";
         }
         catch (Exception ex)
         {
@@ -147,7 +217,7 @@ public partial class MainWindow : Window
             StatusText.Text = "Downloading...";
 
             using var httpClient = new HttpClient();
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("MarkdownViewer/1.0");
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("lucidVIEW/1.0");
             var content = await httpClient.GetStringAsync(url);
 
             var uri = new Uri(url);
@@ -157,9 +227,14 @@ public partial class MainWindow : Window
             await DisplayMarkdown(content);
 
             _currentFilePath = url;
-            Title = $"{uri.Segments.LastOrDefault()?.TrimEnd('/') ?? "Remote"} - Markdown Viewer";
-            FileInfoText.Text = "Remote file";
-            StatusText.Text = "Ready";
+            Title = $"{uri.Segments.LastOrDefault()?.TrimEnd('/') ?? "Remote"} - lucidVIEW";
+            EnableFontControls(true);
+            var wordCount = CountWords(content);
+
+            StatusText.Text = url;
+            FileDateText.Text = "Remote";
+            WordCountText.Text = $"{wordCount:N0} words";
+            FileInfoText.Text = $"{content.Length:N0} chars";
         }
         catch (Exception ex)
         {
@@ -184,10 +259,18 @@ public partial class MainWindow : Window
         WelcomePanel.IsVisible = false;
         ContentGrid.IsVisible = true;
 
+        // Show page navigation bar
+        PageNavBar.IsVisible = true;
+
         // Reset to preview tab
         PreviewTab.IsChecked = true;
         RenderedScroller.IsVisible = true;
         RawScroller.IsVisible = false;
+
+        // Calculate pages after layout (estimate based on content length)
+        var estimatedHeight = content.Split('\n').Length * 24.0; // rough estimate
+        _paginationService.CalculatePages(estimatedHeight);
+        UpdatePageInfo();
 
         return Task.CompletedTask;
     }
@@ -203,41 +286,34 @@ public partial class MainWindow : Window
         return result;
     }
 
+    private static int CountWords(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return 0;
+
+        // Split on whitespace and count non-empty entries
+        return text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+    }
+
     #endregion
 
-    #region Navigation
+    #region Recent Files
 
-    private void ToggleNavPanel()
+    private void UpdateRecentFiles()
     {
-        var isVisible = !NavPanel.IsVisible;
-        NavPanel.IsVisible = isVisible;
-        NavPanelToggle.IsChecked = isVisible;
-        NavPanelCheck.IsChecked = isVisible;
-        _settings.ShowNavigationPanel = isVisible;
-        _settings.Save();
+        RecentFilesList.ItemsSource = _settings.RecentFiles.Take(10).ToList();
     }
 
-    private void OnNavPanelToggle(object? sender, RoutedEventArgs e)
+    private async void OnRecentFileClick(object? sender, RoutedEventArgs e)
     {
-        var isVisible = NavPanelToggle.IsChecked == true;
-        NavPanel.IsVisible = isVisible;
-        NavPanelCheck.IsChecked = isVisible;
-        _settings.ShowNavigationPanel = isVisible;
-        _settings.Save();
-    }
-
-    private void NavigateToHeading(HeadingItem? heading)
-    {
-        if (heading == null) return;
-
-        // Switch to preview tab if on raw
-        PreviewTab.IsChecked = true;
-        RenderedScroller.IsVisible = true;
-        RawScroller.IsVisible = false;
-
-        // TODO: Implement scroll to heading
-        // This would require finding the visual element for the heading
-        // and scrolling to it. For now, just ensure we're on preview.
+        if (sender is Button btn && btn.Tag is string path)
+        {
+            CloseSidePanel();
+            if (path.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                await LoadFromUrl(path);
+            else
+                await LoadFile(path);
+        }
     }
 
     #endregion
@@ -248,43 +324,56 @@ public partial class MainWindow : Window
     {
         _themeService.ApplyTheme(theme);
         _settings.Theme = theme;
+        UpdatePanelOverlay(theme);
     }
 
-    private void UpdateThemeComboBox(AppTheme theme)
+    private void UpdatePanelOverlay(AppTheme theme)
     {
-        ThemeComboBox.SelectedIndex = theme switch
-        {
-            AppTheme.Light => 0,
-            AppTheme.Dark => 1,
-            AppTheme.VSCode => 2,
-            AppTheme.GitHub => 3,
-            _ => 1
-        };
-    }
+        // Light themes get dark overlay, dark themes get light overlay
+        var isLightTheme = theme == AppTheme.Light;
+        var overlayColor = isLightTheme ? "#60000000" : "#40ffffff";
 
-    private void OnThemeSelected(object? sender, RoutedEventArgs e)
-    {
-        if (sender is MenuItem item && item.Tag is string themeName)
+        if (Application.Current?.Resources != null)
         {
-            if (Enum.TryParse<AppTheme>(themeName, out var theme))
-            {
-                ApplyTheme(theme);
-                UpdateThemeComboBox(theme);
-                _settings.Save();
-            }
+            Application.Current.Resources["PanelOverlay"] = new Avalonia.Media.SolidColorBrush(
+                Avalonia.Media.Color.Parse(overlayColor));
         }
     }
 
-    private void OnThemeComboChanged(object? sender, SelectionChangedEventArgs e)
+    private void UpdateThemeCardSelection(AppTheme theme)
     {
-        // Guard against initialization-time calls
-        if (_themeService == null) return;
+        // Remove selected class from all
+        ThemeLightCard.Classes.Remove("selected");
+        ThemeDarkCard.Classes.Remove("selected");
+        ThemeVSCodeCard.Classes.Remove("selected");
+        ThemeGitHubCard.Classes.Remove("selected");
 
-        if (ThemeComboBox.SelectedItem is ComboBoxItem item && item.Tag is string themeName)
+        // Add selected class to current theme
+        switch (theme)
+        {
+            case AppTheme.Light:
+                ThemeLightCard.Classes.Add("selected");
+                break;
+            case AppTheme.Dark:
+                ThemeDarkCard.Classes.Add("selected");
+                break;
+            case AppTheme.VSCode:
+                ThemeVSCodeCard.Classes.Add("selected");
+                break;
+            case AppTheme.GitHub:
+                ThemeGitHubCard.Classes.Add("selected");
+                break;
+        }
+    }
+
+    private void OnThemeCardClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string themeName)
         {
             if (Enum.TryParse<AppTheme>(themeName, out var theme))
             {
                 ApplyTheme(theme);
+                UpdateThemeCardSelection(theme);
                 _settings.Save();
             }
         }
@@ -292,14 +381,61 @@ public partial class MainWindow : Window
 
     #endregion
 
+    #region Font Size
+
+    private void IncreaseFontSize()
+    {
+        _fontSize = Math.Min(32, _fontSize + 2);
+        ApplyFontSize();
+    }
+
+    private void DecreaseFontSize()
+    {
+        _fontSize = Math.Max(10, _fontSize - 2);
+        ApplyFontSize();
+    }
+
+    private void OnFontSizeIncrease(object? sender, RoutedEventArgs e) => IncreaseFontSize();
+    private void OnFontSizeDecrease(object? sender, RoutedEventArgs e) => DecreaseFontSize();
+
+    private void ApplyFontSize()
+    {
+        // Apply font size via LayoutTransformControl for proper layout handling
+        var scale = _fontSize / 16.0;
+        MarkdownLayoutTransform.LayoutTransform = new Avalonia.Media.ScaleTransform(scale, scale);
+
+        _settings.FontSize = _fontSize;
+        _settings.Save();
+        UpdateFontSizeDisplay();
+    }
+
+    private void UpdateFontSizeDisplay()
+    {
+        FontSizeText.Text = $"{_fontSize}px";
+    }
+
+    private void EnableFontControls(bool enabled)
+    {
+        FontDecreaseBtn.IsEnabled = enabled;
+        FontIncreaseBtn.IsEnabled = enabled;
+    }
+
+    #endregion
+
     #region Settings
+
+    private void OnOpenSettings(object? sender, RoutedEventArgs e)
+    {
+        CloseSidePanel();
+        _ = OpenSettings();
+    }
 
     private async Task OpenSettings()
     {
         var dialog = new SettingsDialog(_settings);
         await dialog.ShowDialog(this);
         ApplyTheme(_settings.Theme);
-        UpdateThemeComboBox(_settings.Theme);
+        UpdateThemeCardSelection(_settings.Theme);
     }
 
     #endregion
@@ -320,28 +456,54 @@ public partial class MainWindow : Window
             : WindowState.FullScreen;
     }
 
-    private void ZoomIn()
+    #endregion
+
+    #region Page Navigation
+
+    private void OnPreviousPage(object? sender, RoutedEventArgs e)
     {
-        _zoomLevel = Math.Min(3.0, _zoomLevel + 0.1);
-        ApplyZoom();
+        if (_paginationService.PreviousPage())
+        {
+            ScrollToCurrentPage();
+            UpdatePageInfo();
+        }
     }
 
-    private void ZoomOut()
+    private void OnNextPage(object? sender, RoutedEventArgs e)
     {
-        _zoomLevel = Math.Max(0.5, _zoomLevel - 0.1);
-        ApplyZoom();
+        if (_paginationService.NextPage())
+        {
+            ScrollToCurrentPage();
+            UpdatePageInfo();
+        }
     }
 
-    private void ResetZoom()
+    private void ScrollToCurrentPage()
     {
-        _zoomLevel = 1.0;
-        ApplyZoom();
+        var offset = _paginationService.GetScrollOffsetForPage(_paginationService.CurrentPage);
+        RenderedScroller.Offset = new Vector(0, offset);
     }
 
-    private void ApplyZoom()
+    private void UpdatePageInfo()
     {
-        MarkdownViewer.RenderTransform = new Avalonia.Media.ScaleTransform(_zoomLevel, _zoomLevel);
-        ZoomText.Text = $"{_zoomLevel * 100:F0}%";
+        PageInfoText.Text = $"Page {_paginationService.CurrentPage} of {_paginationService.TotalPages}";
+    }
+
+    private void OnViewModeToggle(object? sender, RoutedEventArgs e)
+    {
+        // Toggle between continuous and single page view
+        if (sender == ContinuousScrollToggle)
+        {
+            _isContinuousScroll = true;
+            ContinuousScrollToggle.IsChecked = true;
+            SinglePageToggle.IsChecked = false;
+        }
+        else
+        {
+            _isContinuousScroll = false;
+            ContinuousScrollToggle.IsChecked = false;
+            SinglePageToggle.IsChecked = true;
+        }
     }
 
     #endregion
@@ -362,6 +524,12 @@ public partial class MainWindow : Window
         {
             ClearSearch();
         }
+    }
+
+    private void OnToggleSearch(object? sender, RoutedEventArgs e)
+    {
+        CloseSidePanel();
+        ToggleSearch();
     }
 
     private void CloseSearch()
@@ -453,16 +621,182 @@ public partial class MainWindow : Window
         var lines = _rawContent.Split('\n');
         if (result.Line < lines.Length)
         {
-            // Calculate approximate scroll position based on line number
-            var lineHeight = 18.0; // Approximate line height for monospace text
+            var lineHeight = 18.0;
             var scrollOffset = result.Line * lineHeight;
             RawScroller.Offset = new Vector(0, Math.Max(0, scrollOffset - 100));
         }
     }
 
+    #endregion
+
+    #region Print
+
+    private void OnPrint(object? sender, RoutedEventArgs e)
+    {
+        CloseSidePanel();
+        _ = Print();
+    }
+
+    private async Task Print()
+    {
+        if (string.IsNullOrEmpty(_rawContent))
+        {
+            StatusText.Text = "No document to print";
+            return;
+        }
+
+        try
+        {
+            StatusText.Text = "Preparing document for print...";
+
+            // Generate HTML for printing (cross-platform approach)
+            var html = GeneratePrintHtml(_rawContent);
+
+            // Save to temp file
+            var tempPath = Path.Combine(Path.GetTempPath(), $"lucidview_print_{Guid.NewGuid():N}.html");
+            await File.WriteAllTextAsync(tempPath, html);
+
+            // Open in default browser for printing
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = tempPath,
+                UseShellExecute = true
+            };
+            System.Diagnostics.Process.Start(psi);
+
+            StatusText.Text = "Document opened in browser - use Ctrl+P to print";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Print error: {ex.Message}";
+        }
+    }
+
+    private string GeneratePrintHtml(string markdown)
+    {
+        var processed = _markdownService.ProcessMarkdown(markdown);
+
+        // Get theme colors for print
+        var isDark = _settings.Theme != AppTheme.Light;
+        var bgColor = isDark ? "#1e1e1e" : "#ffffff";
+        var textColor = isDark ? "#d4d4d4" : "#1a1a1a";
+        var codeColor = isDark ? "#2d2d2d" : "#f5f5f5";
+
+        return $@"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=""utf-8"">
+    <title>{Path.GetFileName(_currentFilePath ?? "Document")} - lucidVIEW</title>
+    <style>
+        @media print {{
+            body {{ background: white !important; color: black !important; }}
+            pre, code {{ background: #f5f5f5 !important; }}
+        }}
+        @media screen {{
+            body {{ background: {bgColor}; color: {textColor}; }}
+            pre, code {{ background: {codeColor}; }}
+        }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            font-size: {_fontSize}px;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+        }}
+        h1, h2, h3, h4, h5, h6 {{ margin-top: 1.5em; margin-bottom: 0.5em; }}
+        h1 {{ font-size: 2em; border-bottom: 1px solid #ccc; padding-bottom: 0.3em; }}
+        h2 {{ font-size: 1.5em; border-bottom: 1px solid #eee; padding-bottom: 0.3em; }}
+        pre {{ padding: 16px; border-radius: 6px; overflow-x: auto; }}
+        code {{ padding: 2px 6px; border-radius: 3px; font-family: 'Cascadia Code', 'JetBrains Mono', Consolas, monospace; }}
+        pre code {{ padding: 0; }}
+        blockquote {{ border-left: 4px solid #58a6ff; margin: 1em 0; padding-left: 1em; color: #666; }}
+        table {{ border-collapse: collapse; width: 100%; margin: 1em 0; }}
+        th, td {{ border: 1px solid #ddd; padding: 8px 12px; text-align: left; }}
+        th {{ background: #f5f5f5; }}
+        img {{ max-width: 100%; height: auto; }}
+        a {{ color: #58a6ff; }}
+        .print-header {{
+            text-align: center;
+            margin-bottom: 2em;
+            padding-bottom: 1em;
+            border-bottom: 2px solid #58a6ff;
+        }}
+        .print-header h1 {{ border: none; margin: 0; }}
+        .print-footer {{
+            margin-top: 2em;
+            padding-top: 1em;
+            border-top: 1px solid #ccc;
+            text-align: center;
+            font-size: 0.8em;
+            color: #666;
+        }}
+        @page {{ margin: 1in; }}
+    </style>
+</head>
+<body>
+    <div class=""print-header"">
+        <h1>{System.Web.HttpUtility.HtmlEncode(Path.GetFileName(_currentFilePath ?? "Document"))}</h1>
+        <p>Printed from lucidVIEW</p>
+    </div>
+    <article>
+        {ConvertMarkdownToHtml(processed)}
+    </article>
+    <div class=""print-footer"">
+        <p>Generated by lucidVIEW - {DateTime.Now:yyyy-MM-dd HH:mm}</p>
+    </div>
+    <script>
+        // Auto-open print dialog
+        window.onload = function() {{
+            window.print();
+        }};
+    </script>
+</body>
+</html>";
+    }
+
+    private static string ConvertMarkdownToHtml(string markdown)
+    {
+        // Basic markdown to HTML conversion for print
+        // The rendered markdown is already processed by Markdown.Avalonia
+        // This is a simple fallback for HTML output
+        var html = markdown;
+
+        // Simple conversions (Markdown.Avalonia handles the actual rendering)
+        // This produces reasonable HTML for the print view
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"^### (.+)$", "<h3>$1</h3>", System.Text.RegularExpressions.RegexOptions.Multiline);
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"^## (.+)$", "<h2>$1</h2>", System.Text.RegularExpressions.RegexOptions.Multiline);
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"^# (.+)$", "<h1>$1</h1>", System.Text.RegularExpressions.RegexOptions.Multiline);
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"\*\*(.+?)\*\*", "<strong>$1</strong>");
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"\*(.+?)\*", "<em>$1</em>");
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"`(.+?)`", "<code>$1</code>");
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"^- (.+)$", "<li>$1</li>", System.Text.RegularExpressions.RegexOptions.Multiline);
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"\[([^\]]+)\]\(([^)]+)\)", "<a href=\"$2\">$1</a>");
+
+        // Convert line breaks to paragraphs
+        var paragraphs = html.Split(new[] { "\n\n" }, StringSplitOptions.RemoveEmptyEntries);
+        html = string.Join("\n", paragraphs.Select(p =>
+        {
+            if (p.StartsWith("<h") || p.StartsWith("<li") || p.StartsWith("<pre") || p.StartsWith("<ul") || p.StartsWith("<ol"))
+                return p;
+            return $"<p>{p.Replace("\n", "<br>")}</p>";
+        }));
+
+        return html;
+    }
+
+    #endregion
+
+    #region Help
+
+    private void OnOpenHelp(object? sender, RoutedEventArgs e)
+    {
+        CloseSidePanel();
+        _ = OpenHelp();
+    }
+
     private async Task OpenHelp()
     {
-        // Try to find README.md in the application directory
         var exePath = AppContext.BaseDirectory;
         var readmePath = Path.Combine(exePath, "README.md");
 
@@ -472,7 +806,6 @@ public partial class MainWindow : Window
         }
         else
         {
-            // Try development location
             var devPath = Path.Combine(exePath, "..", "..", "..", "..", "README.md");
             if (File.Exists(devPath))
             {
@@ -483,6 +816,66 @@ public partial class MainWindow : Window
                 StatusText.Text = "README.md not found";
             }
         }
+    }
+
+    #endregion
+
+    #region Heading Navigation
+
+    private void OnHeadingClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.DataContext is HeadingItem heading)
+        {
+            // Switch to preview tab
+            PreviewTab.IsChecked = true;
+            RenderedScroller.IsVisible = true;
+            RawScroller.IsVisible = false;
+
+            // Scroll to heading by searching for it in the rendered content
+            ScrollToHeading(heading);
+            CloseSidePanel();
+        }
+    }
+
+    private void ScrollToHeading(HeadingItem heading)
+    {
+        // Find the heading element in the visual tree and scroll to it
+        var headingElement = FindHeadingElement(MarkdownViewer, heading.Text);
+        if (headingElement != null)
+        {
+            // Get the position of the element relative to the scroll viewer
+            var transform = headingElement.TransformToVisual(RenderedScroller);
+            if (transform != null)
+            {
+                var point = transform.Value.Transform(new Avalonia.Point(0, 0));
+                var newOffset = RenderedScroller.Offset.Y + point.Y - 20; // 20px padding from top
+                RenderedScroller.Offset = new Avalonia.Vector(0, Math.Max(0, newOffset));
+            }
+        }
+    }
+
+    private static Control? FindHeadingElement(Visual parent, string headingText)
+    {
+        // Search for TextBlock containing the heading text
+        foreach (var child in Avalonia.VisualTree.VisualExtensions.GetVisualChildren(parent))
+        {
+            if (child is TextBlock textBlock)
+            {
+                var text = textBlock.Text?.Trim() ?? "";
+                if (text.Equals(headingText, StringComparison.OrdinalIgnoreCase))
+                {
+                    return textBlock;
+                }
+            }
+
+            if (child is Visual visual)
+            {
+                var result = FindHeadingElement(visual, headingText);
+                if (result != null)
+                    return result;
+            }
+        }
+        return null;
     }
 
     #endregion
@@ -523,7 +916,7 @@ public partial class MainWindow : Window
 
     #endregion
 
-    #region Event Handlers
+    #region Window Events
 
     private void OnWindowClosing(object? sender, WindowClosingEventArgs e)
     {
@@ -532,105 +925,56 @@ public partial class MainWindow : Window
         _settings.Save();
     }
 
-    private async void OnAboutClicked(object? sender, RoutedEventArgs e)
+    #endregion
+
+    #region Window Icon
+
+    private void SetWindowIcon()
     {
-        var dialog = new Window
+        try
         {
-            Title = "About Markdown Viewer",
-            Width = 350,
-            Height = 200,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            CanResize = false,
-            Background = Avalonia.Media.Brushes.Transparent
-        };
+            // Generate a simple icon programmatically using SkiaSharp
+            using var surface = SKSurface.Create(new SKImageInfo(64, 64));
+            var canvas = surface.Canvas;
 
-        var content = new StackPanel
-        {
-            Margin = new Thickness(24),
-            Spacing = 8,
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
-        };
+            // Dark background with rounded corners
+            using var bgPaint = new SKPaint { Color = new SKColor(26, 26, 46), IsAntialias = true };
+            canvas.DrawRoundRect(new SKRoundRect(new SKRect(0, 0, 64, 64), 8), bgPaint);
 
-        content.Children.Add(new TextBlock
-        {
-            Text = "Markdown Viewer",
-            FontSize = 20,
-            FontWeight = Avalonia.Media.FontWeight.SemiBold,
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center
-        });
-
-        content.Children.Add(new TextBlock
-        {
-            Text = "Version 1.0.0",
-            Foreground = Avalonia.Media.Brushes.Gray,
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center
-        });
-
-        content.Children.Add(new TextBlock
-        {
-            Text = "A lightweight cross-platform markdown viewer",
-            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
-            Margin = new Thickness(0, 8, 0, 0)
-        });
-
-        content.Children.Add(new TextBlock
-        {
-            Text = "Built with Avalonia UI",
-            Foreground = Avalonia.Media.Brushes.Gray,
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center
-        });
-
-        var okButton = new Button
-        {
-            Content = "OK",
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
-            Margin = new Thickness(0, 16, 0, 0),
-            Padding = new Thickness(24, 8)
-        };
-        okButton.Click += (_, _) => dialog.Close();
-        content.Children.Add(okButton);
-
-        dialog.Content = content;
-        await dialog.ShowDialog(this);
-    }
-
-    private void PopulateRecentFiles()
-    {
-        RecentFilesMenu.Items.Clear();
-
-        if (_settings.RecentFiles.Count == 0)
-        {
-            var emptyItem = new MenuItem { Header = "(No recent files)", IsEnabled = false };
-            RecentFilesMenu.Items.Add(emptyItem);
-            return;
-        }
-
-        foreach (var recent in _settings.RecentFiles.Take(10))
-        {
-            var item = new MenuItem { Header = recent.DisplayName, Tag = recent.Path };
-            item.Click += async (s, _) =>
+            // Draw "l" in gray (italic approximation via skew)
+            using var lucidPaint = new SKPaint
             {
-                if (s is MenuItem mi && mi.Tag is string path)
-                {
-                    if (path.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-                        await LoadFromUrl(path);
-                    else
-                        await LoadFile(path);
-                }
+                Color = new SKColor(0xDD, 0xDD, 0xDD),
+                TextSize = 36,
+                IsAntialias = true,
+                Typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.BoldItalic)
             };
-            RecentFilesMenu.Items.Add(item);
-        }
+            canvas.Save();
+            canvas.Skew(-0.15f, 0);
+            canvas.DrawText("l", 14, 46, lucidPaint);
+            canvas.Restore();
 
-        RecentFilesMenu.Items.Add(new Separator());
-        var clearItem = new MenuItem { Header = "Clear Recent Files" };
-        clearItem.Click += (_, _) =>
+            // Draw "V" in white (bold)
+            using var viewPaint = new SKPaint
+            {
+                Color = SKColors.White,
+                TextSize = 36,
+                IsAntialias = true,
+                Typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Bold)
+            };
+            canvas.DrawText("V", 30, 46, viewPaint);
+
+            // Convert to Avalonia bitmap
+            using var image = surface.Snapshot();
+            using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+            using var stream = new MemoryStream(data.ToArray());
+
+            Icon = new WindowIcon(stream);
+        }
+        catch
         {
-            _settings.RecentFiles.Clear();
-            _settings.Save();
-            PopulateRecentFiles();
-        };
-        RecentFilesMenu.Items.Add(clearItem);
+            // Ignore icon errors - not critical
+        }
     }
 
     #endregion

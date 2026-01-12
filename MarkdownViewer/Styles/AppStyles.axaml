@@ -7,6 +7,165 @@
         <Setter Property="Background" Value="{DynamicResource AppBackground}" />
     </Style>
 
+    <!-- ==================== HEADER BAR ==================== -->
+
+    <Style Selector="Border.header-bar">
+        <Setter Property="Background" Value="{DynamicResource AppBackgroundSecondary}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AppBorder}" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="Padding" Value="8,6" />
+        <Setter Property="Height" Value="48" />
+    </Style>
+
+    <Style Selector="Button.header-btn">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="12,8" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Foreground" Value="{DynamicResource AppText}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="Button.header-btn:pointerover">
+        <Setter Property="Background" Value="{DynamicResource AppSurfaceHover}" />
+    </Style>
+
+    <Style Selector="Button.header-btn:pressed">
+        <Setter Property="Background" Value="{DynamicResource AppBorderSubtle}" />
+    </Style>
+
+    <Style Selector="Button.font-btn-small">
+        <Setter Property="Padding" Value="8,8" />
+        <Setter Property="MinWidth" Value="36" />
+    </Style>
+
+    <Style Selector="Button.font-btn-large">
+        <Setter Property="Padding" Value="8,4" />
+        <Setter Property="MinWidth" Value="36" />
+    </Style>
+
+    <!-- ==================== SIDE PANEL ==================== -->
+
+    <Style Selector="Border.panel-header">
+        <Setter Property="Background" Value="{DynamicResource AppBackgroundTertiary}" />
+        <Setter Property="Padding" Value="8,8" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AppBorder}" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+    </Style>
+
+    <Style Selector="Button.panel-item">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="16,12" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="Foreground" Value="{DynamicResource AppText}" />
+        <Setter Property="CornerRadius" Value="0" />
+    </Style>
+
+    <Style Selector="Button.panel-item:pointerover">
+        <Setter Property="Background" Value="{DynamicResource AppSurfaceHover}" />
+    </Style>
+
+    <Style Selector="Button.panel-item:pressed">
+        <Setter Property="Background" Value="{DynamicResource AppBorderSubtle}" />
+    </Style>
+
+    <Style Selector="Button.panel-subitem">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="12,8" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="CornerRadius" Value="4" />
+    </Style>
+
+    <Style Selector="Button.panel-subitem:pointerover">
+        <Setter Property="Background" Value="{DynamicResource AppSurfaceHover}" />
+        <Setter Property="Foreground" Value="{DynamicResource AppText}" />
+    </Style>
+
+    <Style Selector="Border.panel-separator">
+        <Setter Property="Height" Value="1" />
+        <Setter Property="Background" Value="{DynamicResource AppBorder}" />
+        <Setter Property="Margin" Value="16,8" />
+    </Style>
+
+    <Style Selector="Expander.panel-expander">
+        <Setter Property="Background" Value="{DynamicResource AppBackgroundTertiary}" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Foreground" Value="{DynamicResource AppText}" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="Margin" Value="0,4" />
+        <Setter Property="CornerRadius" Value="0" />
+    </Style>
+
+    <Style Selector="Expander.panel-expander /template/ ToggleButton">
+        <Setter Property="Padding" Value="16,12" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+
+    <Style Selector="Expander.panel-expander /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Padding" Value="16,8,16,16" />
+    </Style>
+
+    <!-- ==================== THEME CARDS ==================== -->
+
+    <Style Selector="Button.theme-card">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="2" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AppBorder}" />
+        <Setter Property="Padding" Value="8" />
+        <Setter Property="Margin" Value="4" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+
+    <Style Selector="Button.theme-card:pointerover">
+        <Setter Property="BorderBrush" Value="{DynamicResource AppBorder}" />
+        <Setter Property="Background" Value="{DynamicResource AppSurfaceHover}" />
+    </Style>
+
+    <Style Selector="Button.theme-card.selected">
+        <Setter Property="BorderBrush" Value="{DynamicResource AppAccent}" />
+    </Style>
+
+    <Style Selector="Border.theme-preview">
+        <Setter Property="Width" Value="56" />
+        <Setter Property="Height" Value="56" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AppBorder}" />
+    </Style>
+
+    <Style Selector="Border.theme-preview-light">
+        <Setter Property="Background" Value="#ffffff" />
+    </Style>
+
+    <Style Selector="Border.theme-preview-dark">
+        <Setter Property="Background" Value="#1e1e1e" />
+    </Style>
+
+    <Style Selector="Border.theme-preview-vscode">
+        <Setter Property="Background" Value="#1e1e1e" />
+    </Style>
+
+    <Style Selector="Border.theme-preview-github">
+        <Setter Property="Background" Value="#0d1117" />
+    </Style>
+
+    <!-- ==================== PAGE NAVIGATION BAR ==================== -->
+
+    <Style Selector="Border.page-nav-bar">
+        <Setter Property="Background" Value="{DynamicResource AppBackgroundSecondary}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AppBorder}" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="Padding" Value="12,6" />
+    </Style>
+
     <!-- ==================== TOOLBAR BUTTON ==================== -->
 
     <Style Selector="Button.toolbar">
@@ -24,6 +183,24 @@
 
     <Style Selector="Button.toolbar:pressed">
         <Setter Property="Background" Value="{DynamicResource AppBorderSubtle}" />
+    </Style>
+
+    <Style Selector="ToggleButton.toolbar">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}" />
+    </Style>
+
+    <Style Selector="ToggleButton.toolbar:pointerover">
+        <Setter Property="Background" Value="{DynamicResource AppSurfaceHover}" />
+        <Setter Property="Foreground" Value="{DynamicResource AppText}" />
+    </Style>
+
+    <Style Selector="ToggleButton.toolbar:checked">
+        <Setter Property="Background" Value="{DynamicResource AppBorderSubtle}" />
+        <Setter Property="Foreground" Value="{DynamicResource AppAccent}" />
     </Style>
 
     <!-- ==================== TAB BUTTONS ==================== -->
@@ -58,51 +235,6 @@
         <Setter Property="Foreground" Value="{DynamicResource AppText}" />
         <Setter Property="BorderBrush" Value="{DynamicResource AppAccent}" />
         <Setter Property="FontWeight" Value="SemiBold" />
-    </Style>
-
-    <!-- ==================== THEME TOGGLE ==================== -->
-
-    <Style Selector="ToggleButton.theme-toggle">
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="Padding" Value="8,6" />
-        <Setter Property="CornerRadius" Value="6" />
-        <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}" />
-    </Style>
-
-    <Style Selector="ToggleButton.theme-toggle:pointerover">
-        <Setter Property="Background" Value="{DynamicResource AppSurfaceHover}" />
-        <Setter Property="Foreground" Value="{DynamicResource AppText}" />
-    </Style>
-
-    <Style Selector="ToggleButton.theme-toggle:checked">
-        <Setter Property="Background" Value="{DynamicResource AppBorderSubtle}" />
-        <Setter Property="Foreground" Value="{DynamicResource AppAccent}" />
-    </Style>
-
-    <!-- ==================== NAVIGATION TREE ==================== -->
-
-    <Style Selector="TreeViewItem">
-        <Setter Property="Padding" Value="0" />
-        <Setter Property="Margin" Value="0" />
-    </Style>
-
-    <Style Selector="ListBoxItem.nav-item">
-        <Setter Property="Padding" Value="12,8" />
-        <Setter Property="Margin" Value="0" />
-        <Setter Property="CornerRadius" Value="6" />
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}" />
-    </Style>
-
-    <Style Selector="ListBoxItem.nav-item:pointerover">
-        <Setter Property="Background" Value="{DynamicResource AppSurfaceHover}" />
-        <Setter Property="Foreground" Value="{DynamicResource AppText}" />
-    </Style>
-
-    <Style Selector="ListBoxItem.nav-item:selected">
-        <Setter Property="Background" Value="{DynamicResource AppSelectionBg}" />
-        <Setter Property="Foreground" Value="{DynamicResource AppAccent}" />
     </Style>
 
     <!-- ==================== SEPARATOR ==================== -->
@@ -164,8 +296,9 @@
     <!-- ==================== WELCOME PANEL ==================== -->
 
     <Style Selector="TextBlock.welcome-title">
-        <Setter Property="FontSize" Value="28" />
+        <Setter Property="FontSize" Value="32" />
         <Setter Property="FontWeight" Value="Light" />
+        <Setter Property="FontFamily" Value="Segoe UI Light, San Francisco, Ubuntu Light" />
         <Setter Property="Foreground" Value="{DynamicResource AppText}" />
     </Style>
 
@@ -192,17 +325,24 @@
         <Setter Property="Background" Value="{DynamicResource AppAccentHover}" />
     </Style>
 
+    <Style Selector="Button.link-btn">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="{DynamicResource AppLink}" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FontSize" Value="14" />
+    </Style>
+
+    <Style Selector="Button.link-btn:pointerover">
+        <Setter Property="Foreground" Value="{DynamicResource AppAccentHover}" />
+    </Style>
+
     <!-- ==================== STATUS BAR ==================== -->
 
     <Style Selector="TextBlock.status-text">
         <Setter Property="FontSize" Value="12" />
         <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}" />
-    </Style>
-
-    <!-- ==================== MENU ==================== -->
-
-    <Style Selector="Menu">
-        <Setter Property="Background" Value="{DynamicResource AppBackgroundSecondary}" />
     </Style>
 
 </Styles>
