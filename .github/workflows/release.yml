@@ -95,7 +95,12 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         path: artifacts
-        merge-multiple: true
+
+    - name: List artifacts
+      run: |
+        echo "=== Downloaded artifacts ==="
+        find artifacts -type f -name "*.zip" | head -20
+        ls -la artifacts/
 
     - name: Get version
       id: version
@@ -106,6 +111,12 @@ jobs:
           echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
         fi
 
+    - name: Flatten artifacts
+      run: |
+        mkdir -p release-files
+        find artifacts -name "*.zip" -exec cp {} release-files/ \;
+        ls -la release-files/
+
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
@@ -113,7 +124,7 @@ jobs:
         name: lucidVIEW ${{ steps.version.outputs.version }}
         draft: false
         prerelease: false
-        files: artifacts/*.zip
+        files: release-files/*.zip
         generate_release_notes: true
         body: |
           ## lucidVIEW ${{ steps.version.outputs.version }}

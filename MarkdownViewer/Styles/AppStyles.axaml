@@ -345,4 +345,39 @@
         <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}" />
     </Style>
 
+    <!-- ==================== METADATA PANEL ==================== -->
+
+    <Style Selector="Border.metadata-panel">
+        <Setter Property="Background" Value="{DynamicResource AppBackgroundTertiary}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AppBorder}" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="Padding" Value="16,8" />
+    </Style>
+
+    <Style Selector="Border.category-tag">
+        <Setter Property="Background" Value="{DynamicResource AppAccent}" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="10,4" />
+        <Setter Property="Margin" Value="0,0,6,0" />
+    </Style>
+
+    <Style Selector="TextBlock.category-text">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="Medium" />
+        <Setter Property="Foreground" Value="White" />
+    </Style>
+
+    <Style Selector="TextBlock.metadata-date">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{DynamicResource AppTextSecondary}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="TextBlock.metadata-label">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{DynamicResource AppTextMuted}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Margin" Value="0,0,6,0" />
+    </Style>
+
 </Styles>

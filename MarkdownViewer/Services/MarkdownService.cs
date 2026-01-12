@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using MarkdownViewer.Models;
 
 namespace MarkdownViewer.Services;
 
@@ -19,15 +20,46 @@ public partial class MarkdownService
         _basePath = null;
     }
 
+    /// <summary>
+    /// Extract metadata from markdown content (categories, publication date)
+    /// </summary>
+    public DocumentMetadata ExtractMetadata(string content)
+    {
+        var metadata = new DocumentMetadata();
+
+        // Extract categories: <!--category-- ASP.NET, PostgreSQL, Search -->
+        var categoryMatch = CategoryRegex().Match(content);
+        if (categoryMatch.Success)
+        {
+            var categoriesStr = categoryMatch.Groups[1].Value;
+            metadata.Categories = categoriesStr
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToList();
+        }
+
+        // Extract publication date: <datetime class="hidden">2026-01-14T12:00</datetime>
+        var dateMatch = DatetimeRegex().Match(content);
+        if (dateMatch.Success && DateTime.TryParse(dateMatch.Groups[1].Value, out var pubDate))
+        {
+            metadata.PublicationDate = pubDate;
+        }
+
+        return metadata;
+    }
+
     public string ProcessMarkdown(string content)
     {
+        // Remove metadata tags from rendered content (they'll be shown separately)
+        content = CategoryRegex().Replace(content, "");
+        content = DatetimeRegex().Replace(content, "");
+
         // Process relative image paths
         content = ProcessImagePaths(content);
 
         // Process mermaid code blocks (placeholder for now)
         content = ProcessMermaidBlocks(content);
 
-        return content;
+        return content.Trim();
     }
 
     private string ProcessImagePaths(string content)
@@ -102,4 +134,11 @@ public partial class MarkdownService
 
     [GeneratedRegex(@"```mermaid\s*\n([\s\S]*?)```", RegexOptions.Multiline | RegexOptions.Compiled)]
     private static partial Regex MermaidBlockRegex();
+
+    // Metadata extraction patterns
+    [GeneratedRegex(@"<!--\s*category\s*--\s*(.+?)\s*-->", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
+    private static partial Regex CategoryRegex();
+
+    [GeneratedRegex(@"<datetime[^>]*>([^<]+)</datetime>", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
+    private static partial Regex DatetimeRegex();
 }

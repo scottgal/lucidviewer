@@ -253,6 +253,33 @@
                             </StackPanel>
                         </Border>
 
+                        <!-- Metadata Panel (categories, date) -->
+                        <Border x:Name="MetadataPanel" DockPanel.Dock="Top" Classes="metadata-panel" IsVisible="False">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <!-- Categories as tags -->
+                                <ItemsControl x:Name="CategoriesControl" Grid.Column="0">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel Orientation="Horizontal" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Classes="category-tag">
+                                                <TextBlock Text="{Binding}" Classes="category-text" />
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <!-- Publication date -->
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock x:Name="MetadataDateLabel" Text="Published:" Classes="metadata-label" IsVisible="False" />
+                                    <TextBlock x:Name="MetadataDateText" Classes="metadata-date" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
                         <!-- Rendered Markdown -->
                         <ScrollViewer x:Name="RenderedScroller"
                                       IsVisible="True"

@@ -251,6 +251,10 @@ public partial class MainWindow : Window
         var flatHeadings = FlattenHeadings(_headings);
         NavTreeView.ItemsSource = flatHeadings;
 
+        // Extract and display metadata (categories, publication date)
+        var metadata = _markdownService.ExtractMetadata(content);
+        DisplayMetadata(metadata);
+
         // Process and display markdown
         var processed = _markdownService.ProcessMarkdown(content);
         MarkdownViewer.Markdown = processed;
@@ -293,6 +297,39 @@ public partial class MainWindow : Window
 
         // Split on whitespace and count non-empty entries
         return text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+    }
+
+    private void DisplayMetadata(Models.DocumentMetadata metadata)
+    {
+        if (!metadata.HasMetadata)
+        {
+            MetadataPanel.IsVisible = false;
+            return;
+        }
+
+        MetadataPanel.IsVisible = true;
+
+        // Display categories
+        if (metadata.Categories.Count > 0)
+        {
+            CategoriesControl.ItemsSource = metadata.Categories;
+        }
+        else
+        {
+            CategoriesControl.ItemsSource = null;
+        }
+
+        // Display publication date
+        if (metadata.PublicationDate.HasValue)
+        {
+            MetadataDateLabel.IsVisible = true;
+            MetadataDateText.Text = metadata.PublicationDate.Value.ToString("MMMM d, yyyy");
+        }
+        else
+        {
+            MetadataDateLabel.IsVisible = false;
+            MetadataDateText.Text = "";
+        }
     }
 
     #endregion
