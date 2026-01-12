@@ -29,7 +29,8 @@
     <Version>1.0.0</Version>
     <Product>lucidVIEW</Product>
     <Description>A modern, lightweight cross-platform markdown viewer</Description>
-    <Copyright>Copyright 2025</Copyright>
+    <Copyright>Copyright 2026</Copyright>
+    <ApplicationIcon>favicon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

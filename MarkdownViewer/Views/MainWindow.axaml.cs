@@ -1059,7 +1059,7 @@ public partial class MainWindow : Window
 
     private void ScrollToHeading(HeadingItem heading)
     {
-        // Find the heading element in the visual tree and scroll to it
+        // First try to find the heading element in the visual tree
         var headingElement = FindHeadingElement(MdViewer, heading.Text);
         if (headingElement != null)
         {
@@ -1070,19 +1070,35 @@ public partial class MainWindow : Window
                 var point = transform.Value.Transform(new Avalonia.Point(0, 0));
                 var newOffset = RenderedScroller.Offset.Y + point.Y - 20; // 20px padding from top
                 RenderedScroller.Offset = new Avalonia.Vector(0, Math.Max(0, newOffset));
+                return;
             }
+        }
+
+        // Fallback: estimate scroll position based on line number
+        // Calculate approximate position using total content height and line ratio
+        var totalLines = _rawContent.Split('\n').Length;
+        if (totalLines > 0)
+        {
+            var lineRatio = (double)heading.Line / totalLines;
+            var maxScroll = Math.Max(0, RenderedScroller.Extent.Height - RenderedScroller.Viewport.Height);
+            var targetOffset = lineRatio * maxScroll;
+            RenderedScroller.Offset = new Avalonia.Vector(0, targetOffset);
         }
     }
 
     private static Control? FindHeadingElement(Visual parent, string headingText)
     {
         // Search for TextBlock containing the heading text
+        // Use contains check since LiveMarkdown may format headings differently
         foreach (var child in Avalonia.VisualTree.VisualExtensions.GetVisualChildren(parent))
         {
             if (child is TextBlock textBlock)
             {
                 var text = textBlock.Text?.Trim() ?? "";
-                if (text.Equals(headingText, StringComparison.OrdinalIgnoreCase))
+                // Check for exact match or if text contains the heading (for formatted headings)
+                if (!string.IsNullOrEmpty(text) &&
+                    (text.Equals(headingText, StringComparison.OrdinalIgnoreCase) ||
+                     text.Contains(headingText, StringComparison.OrdinalIgnoreCase)))
                 {
                     return textBlock;
                 }
