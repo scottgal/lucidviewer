@@ -5,6 +5,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
+using LiveMarkdown.Avalonia;
 using MarkdownViewer.Models;
 using MarkdownViewer.Services;
 using SkiaSharp;
@@ -28,6 +29,7 @@ public partial class MainWindow : Window
     private int _currentSearchIndex = -1;
     private bool _isSidePanelOpen;
     private double _zoomLevel = 1.0;
+    private readonly ObservableStringBuilder _markdownBuilder = new();
 
     public MainWindow()
     {
@@ -35,6 +37,10 @@ public partial class MainWindow : Window
 
         _settings = AppSettings.Load();
         _markdownService = new MarkdownService();
+
+        // Initialize LiveMarkdown renderer
+        MdViewer.MarkdownBuilder = _markdownBuilder;
+        MdViewer.ImageBasePath = _markdownService.TempDirectory;
         _navigationService = new NavigationService();
         _themeService = new ThemeService(Application.Current!);
         _searchService = new SearchService();
@@ -57,6 +63,9 @@ public partial class MainWindow : Window
         AddHandler(DragDrop.DragEnterEvent, OnDragEnter);
         AddHandler(DragDrop.DragLeaveEvent, OnDragLeave);
         AddHandler(DragDrop.DropEvent, OnDrop);
+
+        // Mouse wheel zoom (intercept even handled events for Ctrl+wheel)
+        RenderedScroller.AddHandler(PointerWheelChangedEvent, OnMarkdownPointerWheelChanged, Avalonia.Interactivity.RoutingStrategies.Tunnel, handledEventsToo: true);
 
         UpdateRecentFiles();
         UpdateFontSizeDisplay();
@@ -255,9 +264,10 @@ public partial class MainWindow : Window
         var metadata = _markdownService.ExtractMetadata(content);
         DisplayMetadata(metadata);
 
-        // Process and display markdown
+        // Process and display markdown using LiveMarkdown's ObservableStringBuilder
         var processed = _markdownService.ProcessMarkdown(content);
-        MdViewer.Markdown = processed;
+        _markdownBuilder.Clear();
+        _markdownBuilder.Append(processed);
         RawTextBlock.Text = content;
 
         WelcomePanel.IsVisible = false;
@@ -362,6 +372,16 @@ public partial class MainWindow : Window
         _themeService.ApplyTheme(theme);
         _settings.Theme = theme;
         UpdatePanelOverlay(theme);
+
+        // Update markdown service for theme-aware mermaid rendering
+        var isDark = theme != AppTheme.Light;
+        _markdownService.SetDarkMode(isDark);
+
+        // Refresh current document to regenerate mermaid diagrams with new theme colors
+        if (!string.IsNullOrEmpty(_rawContent))
+        {
+            _ = DisplayMarkdown(_rawContent);
+        }
     }
 
     private void UpdatePanelOverlay(AppTheme theme)
@@ -537,7 +557,8 @@ public partial class MainWindow : Window
         if (TocItemsControl.SelectedItem is TocItem item)
         {
             ScrollToHeading(item.Heading);
-            OnCloseToc(sender, e);
+            // Keep TOC open for navigation - don't close
+            // Clear selection so same item can be clicked again
             TocItemsControl.SelectedItem = null;
         }
     }
@@ -661,16 +682,25 @@ public partial class MainWindow : Window
 
     #endregion
 
-    #region Mouse Wheel Zoom
+    #region Mouse Wheel Zoom & Scroll
 
     private void OnMarkdownPointerWheelChanged(object? sender, PointerWheelEventArgs e)
     {
-        // Ctrl + Mouse wheel to zoom
         if (e.KeyModifiers.HasFlag(KeyModifiers.Control))
         {
+            // Ctrl + Mouse wheel to zoom
             var delta = e.Delta.Y > 0 ? 10 : -10;
             var newValue = Math.Clamp(ZoomSlider.Value + delta, 50, 200);
             ZoomSlider.Value = newValue;
+            e.Handled = true;
+        }
+        else
+        {
+            // Regular mouse wheel scrolls the document
+            var scrollAmount = e.Delta.Y * 50; // 50px per wheel notch
+            var newOffset = RenderedScroller.Offset.Y - scrollAmount;
+            newOffset = Math.Clamp(newOffset, 0, Math.Max(0, RenderedScroller.Extent.Height - RenderedScroller.Viewport.Height));
+            RenderedScroller.Offset = new Vector(0, newOffset);
             e.Handled = true;
         }
     }
@@ -685,19 +715,12 @@ public partial class MainWindow : Window
     {
         _isTocOpen = !_isTocOpen;
         TocPanel.IsVisible = _isTocOpen;
-        TocOverlay.IsVisible = _isTocOpen;
     }
 
     private void OnCloseToc(object? sender, RoutedEventArgs e)
     {
         _isTocOpen = false;
         TocPanel.IsVisible = false;
-        TocOverlay.IsVisible = false;
-    }
-
-    private void OnTocOverlayClick(object? sender, PointerPressedEventArgs e)
-    {
-        OnCloseToc(sender, e);
     }
 
     #endregion

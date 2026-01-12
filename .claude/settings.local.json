@@ -52,7 +52,10 @@
       "Bash(dotnet remove:*)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(git checkout:*)",
-      "Bash(dotnet nuget why:*)"
+      "Bash(dotnet nuget why:*)",
+      "Bash(ildasm:*)",
+      "Bash(wmic process where \"name=''lucidVIEW.exe''\" delete)",
+      "WebFetch(domain:docs.avaloniaui.net)"
     ]
   }
 }

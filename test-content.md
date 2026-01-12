@@ -75,6 +75,10 @@ sequenceDiagram
     App-->>User: Display content
 ```
 
+## Test Image
+
+![Test Image](https://via.placeholder.com/150)
+
 ## Other Features
 
 ### Blockquote

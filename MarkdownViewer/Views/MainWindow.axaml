@@ -1,6 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:md="clr-namespace:Markdown.Avalonia;assembly=Markdown.Avalonia"
+        xmlns:md="clr-namespace:LiveMarkdown.Avalonia;assembly=LiveMarkdown.Avalonia"
         xmlns:views="clr-namespace:MarkdownViewer.Views"
         xmlns:services="clr-namespace:MarkdownViewer.Services"
         xmlns:models="clr-namespace:MarkdownViewer.Models"
@@ -222,6 +222,53 @@
                 <!-- Content Area -->
                 <Grid x:Name="ContentGrid" IsVisible="False">
                     <DockPanel>
+                        <!-- TOC Panel - docked left, non-modal -->
+                        <Border x:Name="TocPanel"
+                                DockPanel.Dock="Left"
+                                IsVisible="False"
+                                Width="250"
+                                Background="{DynamicResource AppBackgroundSecondary}"
+                                BorderBrush="{DynamicResource AppBorder}"
+                                BorderThickness="0,0,1,0">
+                            <DockPanel>
+                                <!-- TOC Header -->
+                                <Border DockPanel.Dock="Top" Classes="panel-header">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Grid.Column="0"
+                                                   Text="Contents"
+                                                   FontSize="14"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource AppText}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="12,0,0,0" />
+                                        <Button Grid.Column="1"
+                                                Classes="header-btn"
+                                                Click="OnCloseToc"
+                                                ToolTip.Tip="Close TOC">
+                                            <PathIcon Data="M18 6L6 18M6 6l12 12" Width="14" Height="14" Foreground="{DynamicResource AppText}" />
+                                        </Button>
+                                    </Grid>
+                                </Border>
+
+                                <!-- TOC Content -->
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <ListBox x:Name="TocItemsControl"
+                                             Margin="4"
+                                             Background="Transparent"
+                                             SelectionChanged="OnTocSelectionChanged">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Text}"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           Margin="{Binding Margin}"
+                                                           Foreground="{DynamicResource AppText}" />
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </ScrollViewer>
+                            </DockPanel>
+                        </Border>
+
                         <!-- Search Bar -->
                         <Border x:Name="SearchPanel"
                                 DockPanel.Dock="Top"
@@ -288,54 +335,54 @@
                             </Grid>
                         </Border>
 
-                        <!-- Rendered Markdown - DockPanel for fixed gutters at edges -->
-                        <DockPanel x:Name="RenderedPanel" IsVisible="True" Background="{DynamicResource AppBackground}">
-                            <!-- Left gutter (docked to left edge of window) -->
-                            <Border DockPanel.Dock="Left" Width="18" Background="{DynamicResource AppBackgroundSecondary}" />
+                        <!-- Content Views - stacked, only one visible at a time -->
+                        <Grid>
+                            <!-- Rendered Markdown - DockPanel for fixed gutters at edges -->
+                            <DockPanel x:Name="RenderedPanel" IsVisible="True" Background="{DynamicResource AppBackground}">
+                                <!-- Left gutter (docked to left edge of window) -->
+                                <Border DockPanel.Dock="Left" Width="18" Background="{DynamicResource AppBackgroundSecondary}" />
 
-                            <!-- ScrollViewer fills remaining space, its scrollbar naturally at right edge -->
-                            <ScrollViewer x:Name="RenderedScroller"
-                                          HorizontalScrollBarVisibility="Disabled"
-                                          VerticalScrollBarVisibility="Visible"
-                                          AllowAutoHide="False"
-                                          PointerWheelChanged="OnMarkdownPointerWheelChanged">
-                                <LayoutTransformControl x:Name="MarkdownLayoutTransform">
-                                    <Border Padding="40,32" MaxWidth="1200" HorizontalAlignment="Center">
-                                        <md:MarkdownScrollViewer x:Name="MdViewer"
-                                                                  Markdown=""
-                                                                  SaveScrollValueWhenContentUpdated="False">
-                                            <md:MarkdownScrollViewer.ContextMenu>
-                                                <ContextMenu>
-                                                    <MenuItem Header="Copy" Click="OnCopyText" InputGesture="Ctrl+C">
-                                                        <MenuItem.Icon>
-                                                            <PathIcon Data="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
-                                                        </MenuItem.Icon>
-                                                    </MenuItem>
-                                                    <MenuItem Header="Select All" Click="OnSelectAll" InputGesture="Ctrl+A" />
-                                                    <Separator />
-                                                    <MenuItem Header="Copy as HTML" Click="OnCopyAsHtml" />
-                                                </ContextMenu>
-                                            </md:MarkdownScrollViewer.ContextMenu>
-                                        </md:MarkdownScrollViewer>
-                                    </Border>
-                                </LayoutTransformControl>
+                                <!-- ScrollViewer fills remaining space, its scrollbar naturally at right edge -->
+                                <ScrollViewer x:Name="RenderedScroller"
+                                              HorizontalScrollBarVisibility="Disabled"
+                                              VerticalScrollBarVisibility="Visible"
+                                              AllowAutoHide="False">
+                                    <LayoutTransformControl x:Name="MarkdownLayoutTransform">
+                                        <Border Padding="40,32" MaxWidth="1200" HorizontalAlignment="Center">
+                                            <md:MarkdownRenderer x:Name="MdViewer">
+                                                <md:MarkdownRenderer.ContextMenu>
+                                                    <ContextMenu>
+                                                        <MenuItem Header="Copy" Click="OnCopyText" InputGesture="Ctrl+C">
+                                                            <MenuItem.Icon>
+                                                                <PathIcon Data="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+                                                            </MenuItem.Icon>
+                                                        </MenuItem>
+                                                        <MenuItem Header="Select All" Click="OnSelectAll" InputGesture="Ctrl+A" />
+                                                        <Separator />
+                                                        <MenuItem Header="Copy as HTML" Click="OnCopyAsHtml" />
+                                                    </ContextMenu>
+                                                </md:MarkdownRenderer.ContextMenu>
+                                            </md:MarkdownRenderer>
+                                        </Border>
+                                    </LayoutTransformControl>
+                                </ScrollViewer>
+                            </DockPanel>
+
+                            <!-- Raw Markdown -->
+                            <ScrollViewer x:Name="RawScroller"
+                                          IsVisible="False"
+                                          HorizontalScrollBarVisibility="Auto"
+                                          VerticalScrollBarVisibility="Auto"
+                                          Background="{DynamicResource AppBackground}">
+                                <Border Padding="24,16">
+                                    <SelectableTextBlock x:Name="RawTextBlock"
+                                                         FontFamily="Cascadia Code, JetBrains Mono, Consolas, monospace"
+                                                         FontSize="13"
+                                                         Foreground="{DynamicResource AppText}"
+                                                         TextWrapping="NoWrap" />
+                                </Border>
                             </ScrollViewer>
-                        </DockPanel>
-
-                        <!-- Raw Markdown -->
-                        <ScrollViewer x:Name="RawScroller"
-                                      IsVisible="False"
-                                      HorizontalScrollBarVisibility="Auto"
-                                      VerticalScrollBarVisibility="Auto"
-                                      Background="{DynamicResource AppBackground}">
-                            <Border Padding="24,16">
-                                <SelectableTextBlock x:Name="RawTextBlock"
-                                                     FontFamily="Cascadia Code, JetBrains Mono, Consolas, monospace"
-                                                     FontSize="13"
-                                                     Foreground="{DynamicResource AppText}"
-                                                     TextWrapping="NoWrap" />
-                            </Border>
-                        </ScrollViewer>
+                        </Grid>
                     </DockPanel>
                 </Grid>
             </Grid>
@@ -555,59 +602,6 @@
             </DockPanel>
         </Border>
 
-        <!-- TOC Panel Overlay (click to close) -->
-        <Border x:Name="TocOverlay"
-                IsVisible="False"
-                Background="{DynamicResource PanelOverlay}"
-                ZIndex="200"
-                PointerPressed="OnTocOverlayClick" />
-
-        <!-- TOC Slide-In Panel (from right) -->
-        <Border x:Name="TocPanel"
-                IsVisible="False"
-                Width="280"
-                HorizontalAlignment="Right"
-                Background="{DynamicResource AppBackgroundSecondary}"
-                BorderBrush="{DynamicResource AppBorder}"
-                BorderThickness="1,0,0,0"
-                ZIndex="300">
-            <DockPanel>
-                <!-- TOC Header -->
-                <Border DockPanel.Dock="Top" Classes="panel-header">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Grid.Column="0"
-                                   Text="Table of Contents"
-                                   FontSize="14"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource AppText}"
-                                   VerticalAlignment="Center"
-                                   Margin="12,0,0,0" />
-                        <Button Grid.Column="1"
-                                Classes="header-btn"
-                                Click="OnCloseToc"
-                                ToolTip.Tip="Close">
-                            <PathIcon Data="M18 6L6 18M6 6l12 12" Width="16" Height="16" Foreground="{DynamicResource AppText}" />
-                        </Button>
-                    </Grid>
-                </Border>
-
-                <!-- TOC Content -->
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <ListBox x:Name="TocItemsControl"
-                             Margin="8"
-                             Background="Transparent"
-                             SelectionChanged="OnTocSelectionChanged">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Text}"
-                                           TextTrimming="CharacterEllipsis"
-                                           Margin="{Binding Margin}"
-                                           Foreground="{DynamicResource AppText}" />
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </ScrollViewer>
-            </DockPanel>
-        </Border>
+        <!-- TOC Panel - hidden for overlay mode, actual TOC is inline in content area -->
     </Grid>
 </Window>

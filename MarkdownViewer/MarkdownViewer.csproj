@@ -37,10 +37,9 @@
     <PackageReference Include="Avalonia" Version="11.3.10" />
     <PackageReference Include="Avalonia.Desktop" Version="11.3.10" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.10" />
+    <PackageReference Include="LiveMarkdown.Avalonia" Version="1.7.0" />
 
     <!-- Markdown Rendering with Syntax Highlighting (YouYan fork for Avalonia 11.2+ compatibility) -->
-    <PackageReference Include="Markdown.Avalonia.YouYan" Version="11.2.0-a4" />
-    <PackageReference Include="Markdown.Avalonia.SyntaxHigh.YouYan" Version="11.2.0-a4" />
     <PackageReference Include="Naiad" Version="0.1.1" />
     <PackageReference Include="SkiaSharp" Version="3.119.1" />
 
@@ -49,6 +48,7 @@
 
     <!-- Diagnostics (debug only) -->
     <PackageReference Include="Avalonia.Diagnostics" Version="11.3.10" Condition="'$(Configuration)' == 'Debug'" />
+    <PackageReference Include="System.Reflection.MetadataLoadContext" Version="9.0.0" />
   </ItemGroup>
 
   <!-- Include README.md in output for Help menu -->

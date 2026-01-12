@@ -1,6 +1,8 @@
 using System.Text.RegularExpressions;
 using MarkdownViewer.Models;
-using Naiad;
+using MermaidSharp;
+using SkiaSharp;
+using Svg.Skia;
 
 namespace MarkdownViewer.Services;
 
@@ -9,11 +11,19 @@ public partial class MarkdownService
     private string? _basePath;
     private string? _baseUrl;
     private readonly string _tempDir;
+    private bool _isDarkMode = true;
 
     public MarkdownService()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), "lucidview-mermaid");
         Directory.CreateDirectory(_tempDir);
+    }
+
+    public string TempDirectory => _tempDir;
+
+    public void SetDarkMode(bool isDark)
+    {
+        _isDarkMode = isDark;
     }
 
     public void SetBasePath(string? path)
@@ -132,32 +142,100 @@ public partial class MarkdownService
         foreach (Match match in matches)
         {
             var mermaidCode = match.Groups[1].Value.Trim();
+            var diagramType = DetectMermaidDiagramType(mermaidCode);
             string replacement;
 
             try
             {
+                // Preprocess: strip HTML tags that Naiad can't handle
+                var processedCode = mermaidCode
+                    .Replace("<br/>", " ")
+                    .Replace("<br>", " ")
+                    .Replace("<br />", " ");
+
+                // Ensure proper indentation for Naiad parser
+                // Split into lines, find first non-empty line (diagram type), indent the rest
+                var lines = processedCode.Split('\n');
+                var normalizedLines = new List<string>();
+                var foundDiagramType = false;
+
+                foreach (var line in lines)
+                {
+                    var trimmed = line.TrimStart();
+                    if (string.IsNullOrWhiteSpace(trimmed))
+                    {
+                        normalizedLines.Add("");
+                        continue;
+                    }
+
+                    if (!foundDiagramType)
+                    {
+                        // First non-empty line is the diagram type - no indent
+                        normalizedLines.Add(trimmed);
+                        foundDiagramType = true;
+                    }
+                    else
+                    {
+                        // Content lines get consistent 4-space indent
+                        normalizedLines.Add("    " + trimmed);
+                    }
+                }
+
+                processedCode = string.Join("\n", normalizedLines);
+
                 // Render mermaid to SVG using Naiad
-                var svg = Mermaid.Render(mermaidCode);
+                var svgContent = Mermaid.Render(processedCode);
 
-                // Save SVG to temp file
-                var svgPath = Path.Combine(_tempDir, $"diagram_{_mermaidCounter++}.svg");
-                File.WriteAllText(svgPath, svg);
+                // Post-process SVG: convert foreignObject to text elements
+                // Avalonia's SVG renderer doesn't support foreignObject (HTML in SVG)
+                svgContent = ConvertForeignObjectToText(svgContent);
 
-                // Return as image reference
-                var fileUri = new Uri(svgPath).AbsoluteUri;
-                replacement = $"![Mermaid Diagram]({fileUri})";
+                // Render SVG to PNG using SkiaSharp (handles text better than Svg.Skia control)
+                var filename = $"diagram_{_mermaidCounter++}.png";
+                var pngPath = Path.Combine(_tempDir, filename);
+
+                using var svg = new SKSvg();
+                svg.FromSvg(svgContent);
+                if (svg.Picture != null)
+                {
+                    var bounds = svg.Picture.CullRect;
+                    var scale = 2f; // 2x for crisp rendering
+                    var width = (int)(bounds.Width * scale);
+                    var height = (int)(bounds.Height * scale);
+
+                    using var bitmap = new SKBitmap(width, height);
+                    using var canvas = new SKCanvas(bitmap);
+                    canvas.Clear(SKColors.Transparent);
+                    canvas.Scale(scale);
+                    canvas.DrawPicture(svg.Picture);
+
+                    using var image = SKImage.FromBitmap(bitmap);
+                    using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+                    using var stream = File.OpenWrite(pngPath);
+                    data.SaveTo(stream);
+                }
+
+                // Use full path with forward slashes for markdown compatibility
+                var markdownPath = pngPath.Replace("\\", "/");
+                replacement = $"\n\n![Mermaid Diagram]({markdownPath})\n\n";
             }
             catch (Exception ex)
             {
-                // Detect unsupported diagram types
-                var diagramType = DetectMermaidDiagramType(mermaidCode);
-                var errorMessage = ex.Message.Contains("Unsupported") || ex.Message.Contains("parse")
-                    ? $"Naiad cannot yet render '{diagramType}' diagrams"
-                    : ex.Message;
+                // Determine if it's a parse error or unsupported type
+                var isParseError = ex.Message.Contains("parse", StringComparison.OrdinalIgnoreCase) ||
+                                   ex.Message.Contains("unexpected", StringComparison.OrdinalIgnoreCase);
+
+                var errorHeader = isParseError
+                    ? $"Mermaid parse error in '{diagramType}' diagram"
+                    : $"Cannot render '{diagramType}' diagram";
 
                 // On error, show syntax-highlighted mermaid code with warning
                 replacement = $"""
-                    > ⚠️ **Naiad cannot yet render '{diagramType}' diagrams**
+                    > ⚠️ **{errorHeader}**
+                    >
+                    > {ex.Message}
+                    >
+                    > *Note: Complex features like `<br/>` in labels or nested subgraphs may not be supported.*
 
                     ```mermaid
                     {mermaidCode}
@@ -211,4 +289,66 @@ public partial class MarkdownService
 
     [GeneratedRegex(@"<datetime[^>]*>([^<]+)</datetime>", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
     private static partial Regex DatetimeRegex();
+
+    /// <summary>
+    /// Convert foreignObject elements to SVG text elements for Avalonia compatibility
+    /// Also convert filled shapes to stroked outlines for dark mode
+    /// </summary>
+    private string ConvertForeignObjectToText(string svgContent)
+    {
+        // Replace foreignObject with text elements
+        var foreignObjectRegex = ForeignObjectRegex();
+
+        svgContent = foreignObjectRegex.Replace(svgContent, match =>
+        {
+            var x = match.Groups["x"].Value;
+            var y = match.Groups["y"].Value;
+            var width = match.Groups["width"].Value;
+            var height = match.Groups["height"].Value;
+            var innerHtml = match.Groups["content"].Value;
+
+            // Extract text from the HTML content (look for <p> tags or plain text)
+            var textContent = ExtractTextFromHtml(innerHtml);
+            if (string.IsNullOrWhiteSpace(textContent)) return "";
+
+            // Calculate center position for text
+            var centerX = double.TryParse(x, out var xVal) ? xVal : 0;
+            var centerY = double.TryParse(y, out var yVal) ? yVal : 0;
+            var w = double.TryParse(width, out var wVal) ? wVal : 0;
+            var h = double.TryParse(height, out var hVal) ? hVal : 0;
+
+            centerX += w / 2;
+            centerY += h / 2 + 5; // +5 for baseline adjustment
+
+            // Return SVG text element with theme-appropriate fill color
+            var textColor = _isDarkMode ? "#e6edf3" : "#333333";
+            return $@"<text x=""{centerX}"" y=""{centerY}"" text-anchor=""middle"" dy=""0.35em"" fill=""{textColor}"" font-size=""14"">{System.Security.SecurityElement.Escape(textContent)}</text>";
+        });
+
+        // Convert filled shapes to stroked outlines for dark mode compatibility
+        // Change node fills to transparent with colored stroke
+        svgContent = svgContent.Replace("fill=\"#ECECFF\"", "fill=\"none\"");
+        svgContent = svgContent.Replace("fill=\"#ffffde\"", "fill=\"none\""); // cluster fill
+
+        // Remove edge label backgrounds (gray boxes)
+        svgContent = svgContent.Replace("fill=\"rgba(232,232,232,0.8)\"", "fill=\"none\"");
+
+        return svgContent;
+    }
+
+    private static string ExtractTextFromHtml(string html)
+    {
+        // Simple extraction: find text inside <p> tags or spans
+        var pMatch = Regex.Match(html, @"<p>([^<]*)</p>", RegexOptions.Singleline);
+        if (pMatch.Success) return pMatch.Groups[1].Value.Trim();
+
+        // Try to find any text content
+        var textMatch = Regex.Match(html, @">([^<]+)<", RegexOptions.Singleline);
+        if (textMatch.Success) return textMatch.Groups[1].Value.Trim();
+
+        return "";
+    }
+
+    [GeneratedRegex(@"<foreignObject\s+x=""(?<x>[^""]+)""\s+y=""(?<y>[^""]+)""\s+width=""(?<width>[^""]+)""\s+height=""(?<height>[^""]+)""[^>]*>(?<content>[\s\S]*?)</foreignObject>", RegexOptions.Compiled)]
+    private static partial Regex ForeignObjectRegex();
 }

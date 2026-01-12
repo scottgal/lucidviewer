@@ -38,7 +38,7 @@
 
     <Application.Styles>
         <FluentTheme />
-        <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
+        <StyleInclude Source="avares://LiveMarkdown.Avalonia/Styles.axaml" />
         <StyleInclude Source="avares://lucidVIEW/Styles/AppStyles.axaml" />
     </Application.Styles>
 </Application>
