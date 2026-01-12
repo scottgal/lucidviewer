@@ -42,7 +42,9 @@
     <PackageReference Include="Markdown.Avalonia" Version="11.0.2" />
     <PackageReference Include="Markdown.Avalonia.Svg" Version="11.0.2" />
     <PackageReference Include="Markdown.Avalonia.SyntaxHigh" Version="11.0.2" />
+    <PackageReference Include="Naiad" Version="0.1.1" />
     <PackageReference Include="SkiaSharp" Version="3.116.1" />
+    <PackageReference Include="Smdn.LibHighlightSharp" Version="1.2.0" />
 
     <!-- SVG Support -->
     <PackageReference Include="Svg.Skia" Version="3.4.1" />

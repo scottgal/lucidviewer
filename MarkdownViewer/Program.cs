@@ -14,9 +14,8 @@ class Program
 
     public static AppBuilder BuildAvaloniaApp()
     {
-        // Disable data validation to avoid IBinding errors from Markdown.Avalonia's StaticBinding
-        // This removes the binding validation plugin that throws errors for custom IBinding implementations
-        BindingPlugins.DataValidators.RemoveAt(0);
+        // Disable ALL data validators to avoid IBinding errors from Markdown.Avalonia's StaticBinding
+        BindingPlugins.DataValidators.Clear();
 
         return AppBuilder.Configure<App>()
             .UsePlatformDetect()

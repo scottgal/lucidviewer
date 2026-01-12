@@ -183,7 +183,7 @@ dotnet publish MarkdownViewer/MarkdownViewer.csproj -c Release -r linux-x64 -o p
 [mostlylucid](https://www.mostlylucid.net)
 
 ### License
-MIT License
+[The Unlicense](https://unlicense.org/) - Public Domain
 
 ---
 

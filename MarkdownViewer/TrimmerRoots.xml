@@ -8,11 +8,8 @@
   <assembly fullname="Avalonia.Themes.Fluent" preserve="all" />
 
   <!-- Preserve Markdown.Avalonia packages -->
-  <assembly fullname="Markdown.Avalonia" preserve="all" />
-  <assembly fullname="Markdown.Avalonia.Svg" preserve="all" />
-  <assembly fullname="Markdown.Avalonia.SyntaxHigh" preserve="all" />
+  <assembly fullname="OneWare.Markdown.Avalonia.Tight" preserve="all" />
   <assembly fullname="ColorTextBlock.Avalonia" preserve="all" />
-  <assembly fullname="AvaloniaEdit" preserve="all" />
 
   <!-- Preserve our app assembly -->
   <assembly fullname="lucidVIEW">

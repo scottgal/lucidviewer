@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using MarkdownViewer.Models;
+using MermaidSharp;
 
 namespace MarkdownViewer.Services;
 
@@ -7,6 +8,13 @@ public partial class MarkdownService
 {
     private string? _basePath;
     private string? _baseUrl;
+    private readonly string _tempDir;
+
+    public MarkdownService()
+    {
+        _tempDir = Path.Combine(Path.GetTempPath(), "lucidview-mermaid");
+        Directory.CreateDirectory(_tempDir);
+    }
 
     public void SetBasePath(string? path)
     {
@@ -52,6 +60,10 @@ public partial class MarkdownService
         // Remove metadata tags from rendered content (they'll be shown separately)
         content = CategoryRegex().Replace(content, "");
         content = DatetimeRegex().Replace(content, "");
+
+        // Fix bold links: **[text](url)** -> [**text**](url)
+        // Some markdown parsers don't handle bold wrapping links well
+        content = BoldLinkRegex().Replace(content, "[**$1**]($2)");
 
         // Process relative image paths
         content = ProcessImagePaths(content);
@@ -109,23 +121,41 @@ public partial class MarkdownService
         });
     }
 
+    private int _mermaidCounter;
+
     private string ProcessMermaidBlocks(string content)
     {
+        _mermaidCounter = 0;
         var mermaidRegex = MermaidBlockRegex();
 
         return mermaidRegex.Replace(content, match =>
         {
             var mermaidCode = match.Groups[1].Value.Trim();
 
-            // Display as a styled code block with diagram type indicator
-            // Future: Could shell out to mmdc or use a WASM renderer
-            return $"""
-                > **Mermaid Diagram**
+            try
+            {
+                // Render mermaid to SVG using Naiad
+                var svg = Mermaid.Render(mermaidCode);
 
-                ```
-                {mermaidCode}
-                ```
-                """;
+                // Save SVG to temp file
+                var svgPath = Path.Combine(_tempDir, $"diagram_{_mermaidCounter++}.svg");
+                File.WriteAllText(svgPath, svg);
+
+                // Return as image reference
+                var fileUri = new Uri(svgPath).AbsoluteUri;
+                return $"![Mermaid Diagram]({fileUri})";
+            }
+            catch (Exception ex)
+            {
+                // On error, show the code with error message
+                return $"""
+                    > **Mermaid Error**: {ex.Message}
+
+                    ```
+                    {mermaidCode}
+                    ```
+                    """;
+            }
         });
     }
 
@@ -134,6 +164,10 @@ public partial class MarkdownService
 
     [GeneratedRegex(@"```mermaid\s*\n([\s\S]*?)```", RegexOptions.Multiline | RegexOptions.Compiled)]
     private static partial Regex MermaidBlockRegex();
+
+    // Fix bold links: **[text](url)** -> [**text**](url)
+    [GeneratedRegex(@"\*\*\[([^\]]+)\]\(([^)]+)\)\*\*", RegexOptions.Compiled)]
+    private static partial Regex BoldLinkRegex();
 
     // Metadata extraction patterns
     [GeneratedRegex(@"<!--\s*category\s*--\s*(.+?)\s*-->", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
