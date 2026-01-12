@@ -543,11 +543,14 @@ public partial class MainWindow : Window
 
     private void UpdateToc()
     {
-        // Update TOC items control
-        TocItemsControl.ItemsSource = _headings.Select(h => new TocItem
+        // Flatten hierarchical headings to display all levels
+        var flatHeadings = FlattenHeadings(_headings);
+
+        // Update TOC items control with proper indentation by level
+        TocItemsControl.ItemsSource = flatHeadings.Select(h => new TocItem
         {
             Text = h.Text,
-            Margin = new Thickness(h.Level * 12, 2, 0, 2),
+            Margin = new Thickness((h.Level - 1) * 16, 4, 0, 4),
             Heading = h
         }).ToList();
     }
