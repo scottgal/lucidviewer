@@ -51,25 +51,26 @@ jobs:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
     - name: Publish (Windows x64)
+      shell: bash
       run: |
-        dotnet publish ${{ env.PROJECT_PATH }} -c Release -r win-x64 `
-          --self-contained true `
-          -p:PublishSingleFile=true `
-          -p:EnableCompressionInSingleFile=true `
-          -p:IncludeNativeLibrariesForSelfExtract=true `
-          -p:IncludeAllContentForSelfExtract=true `
-          -p:PublishReadyToRun=true `
-          -p:DebugType=none `
+        dotnet publish ${{ env.PROJECT_PATH }} -c Release -r win-x64 \
+          --self-contained true \
+          -p:PublishSingleFile=true \
+          -p:EnableCompressionInSingleFile=true \
+          -p:IncludeNativeLibrariesForSelfExtract=true \
+          -p:IncludeAllContentForSelfExtract=true \
+          -p:PublishReadyToRun=true \
+          -p:DebugType=none \
           -o publish/win-x64
-      shell: pwsh
 
     - name: Verify output
+      shell: bash
       run: |
-        if (Test-Path "publish/win-x64/lucidVIEW.exe") {
-          $size = (Get-Item "publish/win-x64/lucidVIEW.exe").Length / 1MB
-          Write-Host "Build successful! Size: $([math]::Round($size, 2)) MB"
-        } else {
-          Write-Error "Build failed - lucidVIEW.exe not found"
+        if [ -f "publish/win-x64/lucidVIEW.exe" ]; then
+          size=$(stat -c%s "publish/win-x64/lucidVIEW.exe" 2>/dev/null || stat -f%z "publish/win-x64/lucidVIEW.exe")
+          size_mb=$(echo "scale=2; $size / 1048576" | bc)
+          echo "Build successful! Size: ${size_mb} MB"
+        else
+          echo "Build failed - lucidVIEW.exe not found"
           exit 1
-        }
-      shell: pwsh
+        fi
